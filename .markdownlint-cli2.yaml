@@ -1,0 +1,10 @@
+---
+# See https://github.com/DavidAnson/markdownlint/blob/main/doc/Rules.md
+config:
+  default: true
+  no-duplicate-heading:             # MD024
+    siblings_only: true
+ignores:
+  - "**/node_modules/**"
+  - "backlog/**"
+  - ".agent/**"
