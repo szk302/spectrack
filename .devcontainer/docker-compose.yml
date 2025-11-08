@@ -1,0 +1,19 @@
+services:
+  spectrack:
+    build:
+      context: .
+      args:
+        TZ: ${TZ:-Asia/Tokyo}
+        UID: ${UID:-1000}
+        GID: ${GID:-1000}
+        USER_NAME: ${USER_NAME:-dev}
+    environment:
+      NODE_OPTIONS: "--max-old-space-size=4096"
+      POWERLEVEL9K_DISABLE_GITSTATUS: "true"
+    volumes:
+      - ../:/home/${USER_NAME:-dev}/work:delegated
+    working_dir: /home/${USER_NAME:-dev}/work
+    tty: true
+    stdin_open: true
+    command:
+      - /bin/bash
