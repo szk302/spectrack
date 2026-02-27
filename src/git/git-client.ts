@@ -102,6 +102,21 @@ export async function findHistoricalPath(
 }
 
 /**
+ * 指定ファイルがWorking treeで未コミットの変更を持つか確認する
+ */
+export async function isFileModifiedInWorkingTree(
+  git: SimpleGit,
+  relativePath: string,
+): Promise<boolean> {
+  try {
+    const result = await git.raw(["status", "--porcelain", relativePath]);
+    return result.trim().length > 0;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * HEAD の直前コミットハッシュを取得する
  */
 export async function getPreviousCommitHash(

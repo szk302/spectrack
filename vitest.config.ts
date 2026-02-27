@@ -9,9 +9,8 @@ export default defineConfig({
       exclude: [
         "src/cli/index.ts",
         "src/cli/program.ts",
-        "src/cli/commands/diff.ts",
-        "src/cli/commands/graph.ts",
-        "src/cli/commands/list-versions.ts",
+        "src/cli/commands/log.ts",
+        "src/cli/commands/list.ts",
         "src/git/history-resolver.ts",
         "src/git/file-tracker.ts",
         "src/types/context.ts",

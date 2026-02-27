@@ -72,16 +72,32 @@ describe("spectrack init", () => {
     expect(content).toContain("x-st-id: prd-001");
   });
 
-  it("Git リポジトリでない場合はエラー", async () => {
-    // 一時ディレクトリに git がない状態を作る
-    const { mkdtempSync } = await import("node:fs");
+  it("--dry-run ではフロントマターを書き込まない", async () => {
+    fixture = await createGitFixture({
+      "spectrack.yml": `frontMatterKeyPrefix: x-st-\ndocumentRootPath: doc\n`,
+      "doc/prd.md": `# PRD\nThis is a product requirements document.\n`,
+    });
+
+    const exitCode = await runInit(
+      { addFrontmatter: true, dryRun: true },
+      fixture.dir,
+    );
+
+    expect(exitCode).toBe(0);
+    const content = readFileSync(join(fixture.dir, "doc/prd.md"), "utf-8");
+    // dry-run なのでフロントマターは追加されていない
+    expect(content).not.toContain("x-st-id");
+  });
+
+  it("Git リポジトリでない場合でも設定ファイルを作成できる", async () => {
+    const { mkdtempSync, rmSync } = await import("node:fs");
     const { tmpdir } = await import("node:os");
     const tmpDir = mkdtempSync(join(tmpdir(), "spectrack-no-git-"));
     try {
       const exitCode = await runInit({ addFrontmatter: false }, tmpDir);
-      expect(exitCode).toBe(1);
+      expect(exitCode).toBe(0);
+      expect(existsSync(join(tmpDir, SPECTRACK_CONFIG_FILE))).toBe(true);
     } finally {
-      const { rmSync } = await import("node:fs");
       rmSync(tmpDir, { recursive: true, force: true });
     }
   });

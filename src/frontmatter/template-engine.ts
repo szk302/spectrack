@@ -5,25 +5,24 @@ import type { Context } from "../types/context.js";
  *
  * テンプレート構文:
  * - `{{dotpath}}` — context オブジェクトの dotpath 記法でアクセス
- * - `{{nanoid}}` — context.macro.nanoid に解決される
+ * - `{{context.utils.nanoid}}` — nanoid を生成
+ * - `{{nanoid}}` — context.utils.nanoid の短縮形（後方互換）
  *
  * @example
- * expandTemplate("{{context.file.dir}}-{{nanoid}}", context)
+ * expandTemplate("{{context.file.dir}}-{{context.utils.nanoid}}", context)
  * // => "prd-V1StGXR8_Z5jdHi6B-myT"
  */
 export function expandTemplate(template: string, context: Context): string {
-  // テンプレートの root オブジェクト: {{context.file.dir}} のような参照に対応
   const root: Record<string, unknown> = {
     context,
-    macro: context.macro,
   };
 
   return template.replace(/\{\{([^}]+)\}\}/g, (_, path: string) => {
     const trimmed = path.trim();
 
-    // nanoid マクロの短縮形
+    // nanoid 短縮形（後方互換）
     if (trimmed === "nanoid") {
-      return context.macro.nanoid;
+      return context.utils.nanoid;
     }
 
     const value = resolveDotPath(root, trimmed);

@@ -3,6 +3,8 @@ import type { Document as YamlDocument } from "yaml";
 /** ドキュメントの依存先エントリ */
 export type Dependency = {
   readonly id: string;
+  /** パスヒント: 人間用の補助情報（ツールが自動更新する）。追跡の正は id */
+  readonly path?: string;
   readonly version: string;
 };
 

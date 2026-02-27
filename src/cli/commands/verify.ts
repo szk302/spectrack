@@ -4,6 +4,7 @@ import { printError } from "../../output/formatter.js";
 import { detectCycles, formatCycle } from "../../dependency/cycle-detector.js";
 import { buildDependencyGraph } from "../../dependency/dependency-graph.js";
 import { validateVersion } from "../../version/semver-utils.js";
+import { InvalidPrereleaseError } from "../../types/errors.js";
 import type { CommandContext } from "../runner.js";
 import { resolveId } from "../../scanner/id-registry.js";
 
@@ -19,8 +20,6 @@ export async function runVerify(
   console.log(`✅ 検証開始: ${total} 個のドキュメントを検査中...\n`);
 
   let exitCode: ExitCode = ExitCode.SUCCESS;
-  const errors: string[] = [];
-  const warnings: string[] = [];
 
   // フロントマター構造チェック
   let frontMatterOk = 0;
@@ -64,6 +63,7 @@ export async function runVerify(
 
   // バージョン形式チェック
   let versionOk = 0;
+  const versionErrors: string[] = [];
   const versionWarnings: string[] = [];
   for (const doc of ctx.docs) {
     const relPath = relative(ctx.cwd, doc.filePath);
@@ -72,9 +72,12 @@ export async function runVerify(
         validateVersion(doc.currentVersion, relPath);
         versionOk++;
       } catch (err) {
-        versionWarnings.push(
-          `  - ${err instanceof Error ? err.message : String(err)}`,
-        );
+        const msg = `  - ${err instanceof Error ? err.message : String(err)}`;
+        if (err instanceof InvalidPrereleaseError) {
+          versionErrors.push(msg);
+        } else {
+          versionWarnings.push(msg);
+        }
       }
     }
   }
@@ -135,12 +138,15 @@ export async function runVerify(
   }
 
   // バージョン形式
-  if (versionWarnings.length === 0) {
+  if (versionErrors.length === 0 && versionWarnings.length === 0) {
     console.log(`📌 バージョン形式: OK (${versionOk}/${total})`);
+  } else if (versionErrors.length > 0) {
+    console.log(`📌 バージョン形式: ❌ エラー (${versionErrors.length} 件)`);
+    for (const e of versionErrors) console.log(e);
+    for (const w of versionWarnings) console.log(w);
+    exitCode = ExitCode.ERROR;
   } else {
-    console.log(
-      `📌 バージョン形式: ⚠️ 警告 (${versionWarnings.length} 件)`,
-    );
+    console.log(`📌 バージョン形式: ⚠️ 警告 (${versionWarnings.length} 件)`);
     for (const w of versionWarnings) console.log(w);
     if (exitCode === ExitCode.SUCCESS) exitCode = ExitCode.WARNING;
   }
@@ -149,7 +155,7 @@ export async function runVerify(
   if (exitCode === ExitCode.SUCCESS) {
     console.log(`✅ 検証完了: エラーなし`);
   } else if (exitCode === ExitCode.WARNING) {
-    console.log(`✅ 検証完了: 警告 ${warnings.length + cycles.length + versionWarnings.length} 件`);
+    console.log(`✅ 検証完了: 警告 ${cycles.length + versionWarnings.length} 件`);
   } else {
     console.log(`❌ 検証完了: エラーあり`);
   }

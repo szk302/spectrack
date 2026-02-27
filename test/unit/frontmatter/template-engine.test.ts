@@ -24,7 +24,7 @@ const mockContext: Context = {
     args: { file: "docs/prd/requirements.md" },
     options: {},
   },
-  macro: { nanoid: "V1StGXR8_Z5jdHi6B-myT" },
+  utils: { nanoid: "V1StGXR8_Z5jdHi6B-myT" },
 };
 
 describe("resolveDotPath", () => {
@@ -66,8 +66,8 @@ describe("expandTemplate", () => {
     expect(result).toBe("prd-V1StGXR8_Z5jdHi6B-myT");
   });
 
-  it("context.macro.nanoid のフルパスも展開できる", () => {
-    const result = expandTemplate("{{context.macro.nanoid}}", mockContext);
+  it("context.utils.nanoid のフルパスも展開できる", () => {
+    const result = expandTemplate("{{context.utils.nanoid}}", mockContext);
     expect(result).toBe("V1StGXR8_Z5jdHi6B-myT");
   });
 

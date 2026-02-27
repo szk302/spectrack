@@ -4,15 +4,17 @@ import { ExitCode } from "../output/exit-code.js";
 import { printError } from "../output/formatter.js";
 import { initCommandContext } from "./runner.js";
 import { runInit } from "./commands/init.js";
-import { runAdd } from "./commands/add.js";
-import { runUpdate } from "./commands/update.js";
-import { runCheckDeps } from "./commands/check-deps.js";
-import { runShowDeps } from "./commands/show-deps.js";
-import { runFindDependents } from "./commands/find-dependents.js";
 import { runVerify } from "./commands/verify.js";
-import { runListVersions } from "./commands/list-versions.js";
-import { runDiff } from "./commands/diff.js";
 import { runGraph } from "./commands/graph.js";
+// v2 commands
+import { runLink } from "./commands/link.js";
+import { runUnlink } from "./commands/unlink.js";
+import { runBump } from "./commands/bump.js";
+import { runSync } from "./commands/sync.js";
+import { runStatus } from "./commands/status.js";
+import { runList } from "./commands/list.js";
+import { runDependents } from "./commands/dependents.js";
+import { runLog } from "./commands/log.js";
 
 export function createProgram(): Command {
   const program = new Command();
@@ -22,65 +24,43 @@ export function createProgram(): Command {
     .description("仕様書依存関係追跡ツール")
     .version("0.1.0");
 
-  // spectrack init
+  // ── v2 commands ──────────────────────────────────────
+
+  // spectrack init (updated: --dry-run support)
   program
     .command("init")
     .description("設定ファイルを作成し、ドキュメントを初期化する")
     .option("--add-frontmatter", "フロントマターにメタデータを追加する")
-    .action(async (opts: { addFrontmatter?: boolean }) => {
+    .option("--dry-run", "実際の書き込みを行わず変更内容を表示する")
+    .action(async (opts: { addFrontmatter?: boolean; dryRun?: boolean }) => {
       const code = await runInit(
-        { addFrontmatter: opts.addFrontmatter ?? false },
+        {
+          addFrontmatter: opts.addFrontmatter ?? false,
+          dryRun: opts.dryRun ?? false,
+        },
         process.cwd(),
       );
       process.exit(code);
     });
 
-  // spectrack add
+  // spectrack link
   program
-    .command("add <file>")
-    .description("指定ドキュメントにメタデータを追加する")
-    .option(
+    .command("link <file>")
+    .description("ファイル間の依存関係を結ぶ")
+    .requiredOption(
       "--deps <deps>",
-      "依存ドキュメントを指定 (形式: id:version,id:version,...)",
+      "依存先をカンマ区切りのファイルパスで指定 (例: path[:version],...)",
     )
-    .action(async (file: string, opts: { deps?: string }) => {
-      const filePath = resolve(process.cwd(), file);
-      const code = await withContext(false, async (ctx) =>
-        runAdd(filePath, { ...(opts.deps !== undefined && { deps: opts.deps }) }, ctx),
-      );
-      process.exit(code);
-    });
-
-  // spectrack update
-  program
-    .command("update <file>")
-    .description("指定ドキュメントのメタデータを更新する")
-    .option("--version <version>", "ドキュメントバージョンを更新")
-    .option(
-      "--add-deps <deps>",
-      "依存ドキュメントを追加 (形式: id[:version|auto],...)",
-    )
-    .option("--remove-deps <deps>", "依存ドキュメントを削除 (形式: id,...)")
-    .option("--upgrade-deps", "依存先バージョンをすべて最新にアップグレード")
+    .option("--dry-run", "実際の書き込みを行わず変更内容を表示する")
     .action(
-      async (
-        file: string,
-        opts: {
-          version?: string;
-          addDeps?: string;
-          removeDeps?: string;
-          upgradeDeps?: boolean;
-        },
-      ) => {
+      async (file: string, opts: { deps: string; dryRun?: boolean }) => {
         const filePath = resolve(process.cwd(), file);
         const code = await withContext(true, async (ctx) =>
-          runUpdate(
+          runLink(
             filePath,
             {
-              ...(opts.version !== undefined && { version: opts.version }),
-              ...(opts.addDeps !== undefined && { addDeps: opts.addDeps }),
-              ...(opts.removeDeps !== undefined && { removeDeps: opts.removeDeps }),
-              ...(opts.upgradeDeps !== undefined && { upgradeDeps: opts.upgradeDeps }),
+              deps: opts.deps,
+              ...(opts.dryRun !== undefined && { dryRun: opts.dryRun }),
             },
             ctx,
           ),
@@ -89,39 +69,119 @@ export function createProgram(): Command {
       },
     );
 
-  // spectrack check-deps
+  // spectrack unlink
   program
-    .command("check-deps [file]")
-    .description("ドキュメントの依存先をチェックする")
+    .command("unlink <file>")
+    .description("ファイル間の依存関係を解除する")
+    .requiredOption(
+      "--deps <deps>",
+      "依存解除するファイルパスをカンマ区切りで指定",
+    )
+    .option("--dry-run", "実際の書き込みを行わず変更内容を表示する")
+    .action(
+      async (file: string, opts: { deps: string; dryRun?: boolean }) => {
+        const filePath = resolve(process.cwd(), file);
+        const code = await withContext(true, async (ctx) =>
+          runUnlink(
+            filePath,
+            {
+              deps: opts.deps,
+              ...(opts.dryRun !== undefined && { dryRun: opts.dryRun }),
+            },
+            ctx,
+          ),
+        );
+        process.exit(code);
+      },
+    );
+
+  // spectrack bump
+  program
+    .command("bump <file>")
+    .description("ドキュメントのバージョンをSemVerに従って引き上げる")
+    .option("--major", "メジャーバージョンを更新")
+    .option("--minor", "マイナーバージョンを更新")
+    .option("--patch", "パッチバージョンを更新 (デフォルト)")
+    .option("--dry-run", "実際の書き込みを行わず変更内容を表示する")
+    .action(
+      async (
+        file: string,
+        opts: { major?: boolean; minor?: boolean; patch?: boolean; dryRun?: boolean },
+      ) => {
+        const filePath = resolve(process.cwd(), file);
+        const code = await withContext(true, async (ctx) =>
+          runBump(filePath, opts, ctx),
+        );
+        process.exit(code);
+      },
+    );
+
+  // spectrack sync
+  program
+    .command("sync <file>")
+    .description("依存バージョンをWorking treeの最新バージョンに同期する")
+    .option(
+      "--only <ids>",
+      "同期する依存先を指定 (ファイルパスまたはIDをカンマ区切りで)",
+    )
+    .option("--dry-run", "実際の書き込みを行わず変更内容を表示する")
+    .action(
+      async (file: string, opts: { only?: string; dryRun?: boolean }) => {
+        const filePath = resolve(process.cwd(), file);
+        const code = await withContext(true, async (ctx) =>
+          runSync(filePath, opts, ctx),
+        );
+        process.exit(code);
+      },
+    );
+
+  // spectrack status
+  program
+    .command("status [file]")
+    .description("ドキュメントの依存状況をWorking treeベースでチェックする")
     .option("--strict", "パッチ更新も更新ありとみなす")
     .action(async (file: string | undefined, opts: { strict?: boolean }) => {
       const filePath = file ? resolve(process.cwd(), file) : undefined;
       const code = await withContext(true, async (ctx) =>
-        runCheckDeps(filePath, { ...(opts.strict !== undefined && { strict: opts.strict }) }, ctx),
+        runStatus(filePath, opts, ctx),
       );
       process.exit(code);
     });
 
-  // spectrack show-deps
+  // spectrack list
   program
-    .command("show-deps [file]")
-    .description("ドキュメントの依存先をすべて表示する")
-    .action(async (file: string | undefined) => {
-      const filePath = file ? resolve(process.cwd(), file) : undefined;
-      const code = await withContext(true, async (ctx) =>
-        runShowDeps(filePath, ctx),
-      );
+    .command("list")
+    .description("全追跡対象ドキュメントのインベントリを表示する")
+    .action(async () => {
+      const code = await withContext(true, async (ctx) => runList(ctx));
       process.exit(code);
     });
 
-  // spectrack find-dependents
+  // spectrack dependents
   program
-    .command("find-dependents <file>")
-    .description("指定ドキュメントを依存先とするドキュメントを検索する")
+    .command("dependents <file>")
+    .description("指定ドキュメントに依存しているドキュメントを検索する")
     .action(async (file: string) => {
       const filePath = resolve(process.cwd(), file);
       const code = await withContext(true, async (ctx) =>
-        runFindDependents(filePath, ctx),
+        runDependents(filePath, ctx),
+      );
+      process.exit(code);
+    });
+
+  // spectrack log
+  program
+    .command("log <file>")
+    .description("ドキュメントのバージョン変更履歴を表示する")
+    .option("--diff <version>", "指定バージョンとの差分を表示する")
+    .action(async (file: string, opts: { diff?: string }) => {
+      const filePath = resolve(process.cwd(), file);
+      const code = await withContext(true, async (ctx) =>
+        runLog(
+          filePath,
+          { ...(opts.diff !== undefined && { diff: opts.diff }) },
+          ctx,
+        ),
       );
       process.exit(code);
     });
@@ -133,32 +193,10 @@ export function createProgram(): Command {
     .option("--allow-cycles", "循環依存を許容する")
     .action(async (opts: { allowCycles?: boolean }) => {
       const code = await withContext(true, async (ctx) =>
-        runVerify({ ...(opts.allowCycles !== undefined && { allowCycles: opts.allowCycles }) }, ctx),
-      );
-      process.exit(code);
-    });
-
-  // spectrack list-versions
-  program
-    .command("list-versions [file]")
-    .description("ドキュメントのバージョン情報を表示する")
-    .action(async (file: string | undefined) => {
-      const filePath = file ? resolve(process.cwd(), file) : undefined;
-      const code = await withContext(true, async (ctx) =>
-        runListVersions(filePath, ctx),
-      );
-      process.exit(code);
-    });
-
-  // spectrack diff
-  program
-    .command("diff <file>")
-    .description("指定バージョンとの差分を表示する")
-    .requiredOption("--version <version>", "比較対象のバージョン")
-    .action(async (file: string, opts: { version: string }) => {
-      const filePath = resolve(process.cwd(), file);
-      const code = await withContext(true, async (ctx) =>
-        runDiff(filePath, { version: opts.version }, ctx),
+        runVerify(
+          { ...(opts.allowCycles !== undefined && { allowCycles: opts.allowCycles }) },
+          ctx,
+        ),
       );
       process.exit(code);
     });
@@ -170,7 +208,10 @@ export function createProgram(): Command {
     .option("--format <format>", "出力フォーマット (mermaid|dot|json)", "mermaid")
     .action(async (opts: { format?: string }) => {
       const code = await withContext(true, async (ctx) =>
-        runGraph({ ...(opts.format !== undefined && { format: opts.format }) }, ctx),
+        runGraph(
+          { ...(opts.format !== undefined && { format: opts.format }) },
+          ctx,
+        ),
       );
       process.exit(code);
     });

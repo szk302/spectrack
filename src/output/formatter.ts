@@ -79,10 +79,15 @@ export function formatDepStatus(
   currentVersion: string | null,
   commitHash: string | null,
   hasUpdate: boolean,
+  isWorkingTree = false,
 ): string {
   const icon = hasUpdate ? "🔄" : "✅";
   const current = currentVersion ?? "不明";
-  const hash = commitHash ? ` @ ${commitHash}` : "";
+  const hash = isWorkingTree
+    ? " @ Working tree"
+    : commitHash
+      ? ` @ ${commitHash}`
+      : "";
   const updateNote = hasUpdate ? " ⚠️ 更新あり" : "";
   return `${icon} [${id}] ${relativePath} (参照: ${referenceVersion}, 現在: ${current}${hash})${updateNote}`;
 }

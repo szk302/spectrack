@@ -36,6 +36,7 @@ export function updateFrontMatter(
     dependencies: Array.isArray(updatedRaw["x-st-dependencies"])
       ? (updatedRaw["x-st-dependencies"] as Array<{
           id: string;
+          path?: string;
           version: string;
         }>)
           .filter(
@@ -45,7 +46,11 @@ export function updateFrontMatter(
               typeof d.id === "string" &&
               typeof d.version === "string",
           )
-          .map((d) => ({ id: d.id, version: d.version }))
+          .map((d) => ({
+            id: d.id,
+            ...(typeof d.path === "string" && { path: d.path }),
+            version: d.version,
+          }))
       : doc.frontMatter.dependencies,
     raw: updatedRaw,
   };
@@ -55,6 +60,19 @@ export function updateFrontMatter(
     frontMatter: updatedFrontMatter,
     yamlDoc: clonedDoc,
   };
+}
+
+/**
+ * ParsedDocument をファイルに書き込む（dry-run 対応）
+ * dryRun が true の場合は何もしない
+ */
+export function writeDocumentOrDryRun(
+  doc: ParsedDocument,
+  dryRun: boolean,
+): void {
+  if (!dryRun) {
+    writeDocument(doc);
+  }
 }
 
 /**

@@ -5,9 +5,14 @@ import { printError } from "../../output/formatter.js";
 import { parseFile } from "../../frontmatter/parser.js";
 import { resolveVersion } from "../../version/version-resolver.js";
 import type { CommandContext } from "../runner.js";
-import { resolveId } from "../../scanner/id-registry.js";
 
-export async function runFindDependents(
+/**
+ * `spectrack dependents <file>`
+ *
+ * 指定したドキュメントに「依存している」ドキュメント（逆引き）を検索する。
+ * 仕様変更時の影響範囲の特定に使用する。
+ */
+export async function runDependents(
   filePath: string,
   ctx: CommandContext,
 ): Promise<ExitCode> {
@@ -41,11 +46,9 @@ export async function runFindDependents(
   for (const dep of dependents) {
     const depId = dep.frontMatter.id ?? "(不明)";
     const depRelPath = relative(ctx.cwd, dep.filePath);
-    const depVersion = dep.currentVersion ?? "?";
+    const depVersion = resolveVersion(dep) ?? "?";
 
-    const refDep = dep.frontMatter.dependencies.find(
-      (d) => d.id === targetId,
-    );
+    const refDep = dep.frontMatter.dependencies.find((d) => d.id === targetId);
     const refVersion = refDep?.version ?? "?";
 
     console.log(`  ✅ [${depId}] ${depRelPath} (${depVersion})`);

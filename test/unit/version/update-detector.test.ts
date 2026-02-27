@@ -28,13 +28,23 @@ describe("detectUpdate", () => {
   });
 
   it("パッチ更新は strict=false で hasUpdate=false", () => {
-    const result = detectUpdate(dep, "1.0.1", null, false);
+    const result = detectUpdate(dep, "1.0.1", null, false, false);
     expect(result.hasUpdate).toBe(false);
   });
 
   it("パッチ更新は strict=true で hasUpdate=true", () => {
-    const result = detectUpdate(dep, "1.0.1", null, true);
+    const result = detectUpdate(dep, "1.0.1", null, false, true);
     expect(result.hasUpdate).toBe(true);
+  });
+
+  it("isWorkingTree=true の場合は UpdateStatus に反映される", () => {
+    const result = detectUpdate(dep, "1.0.0", null, true);
+    expect(result.isWorkingTree).toBe(true);
+  });
+
+  it("isWorkingTree=false がデフォルト", () => {
+    const result = detectUpdate(dep, "1.0.0", "abc1234");
+    expect(result.isWorkingTree).toBe(false);
   });
 
   it("依存情報が正しく返される", () => {

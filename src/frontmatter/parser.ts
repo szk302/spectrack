@@ -138,9 +138,11 @@ function extractFrontMatter(
         typeof (dep as Record<string, unknown>)["id"] === "string" &&
         typeof (dep as Record<string, unknown>)["version"] === "string"
       ) {
+        const d = dep as Record<string, unknown>;
         dependencies.push({
-          id: (dep as { id: string }).id,
-          version: (dep as { version: string }).version,
+          id: d["id"] as string,
+          ...(typeof d["path"] === "string" && { path: d["path"] }),
+          version: d["version"] as string,
         });
       }
     }

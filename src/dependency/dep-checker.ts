@@ -1,13 +1,17 @@
-import { parseDocument } from "yaml";
+import { existsSync } from "node:fs";
 import type { SimpleGit } from "simple-git";
 import type { VersionedDocument } from "../types/document.js";
 import type { IdRegistry } from "../scanner/id-registry.js";
 import { resolveId } from "../scanner/id-registry.js";
-import { getFileAtCommit } from "../git/git-client.js";
+import { parseFile } from "../frontmatter/parser.js";
+import { resolveVersion } from "../version/version-resolver.js";
+import {
+  getLatestCommitHash,
+  isFileModifiedInWorkingTree,
+} from "../git/git-client.js";
 import { detectUpdate, type UpdateStatus } from "../version/update-detector.js";
-import { DependencyNotFoundError } from "../types/errors.js";
+import { DependencyNotFoundError, InvalidFrontMatterError } from "../types/errors.js";
 import { estimateDeletedFilePath } from "../git/file-tracker.js";
-import { resolveVersionFromRaw } from "../version/version-resolver.js";
 
 export type DepCheckResult = {
   /** 依存元ドキュメント */
@@ -21,19 +25,23 @@ export type DepCheckResult = {
 /**
  * 指定ドキュメントの依存先をチェックする
  *
- * 評価基準 (spec §5):
+ * 評価基準 (spec v2 §5 Working Tree ファースト):
  * - 依存元（参照側）: Working tree（現在のファイルシステム）
- * - 依存先（被参照側）: Gitの最新コミット状態 (HEAD)
+ * - 依存先（被参照側）: Working tree を正として比較
+ *   - 未コミットの変更がある場合は isWorkingTree=true で表示
+ *   - 変更がない場合はコミットハッシュを表示
  *
  * @param doc - チェック対象のドキュメント（Working tree の状態）
  * @param registry - IDレジストリ
  * @param git - SimpleGit インスタンス
+ * @param cwd - 作業ディレクトリ（絶対パス）
  * @param strict - パッチ更新も更新とみなすか
  */
 export async function checkDocDeps(
   doc: VersionedDocument,
   registry: IdRegistry,
   git: SimpleGit,
+  cwd: string,
   strict = false,
 ): Promise<DepCheckResult> {
   const statuses: UpdateStatus[] = [];
@@ -50,14 +58,8 @@ export async function checkDocDeps(
       continue;
     }
 
-    // 依存先の HEAD コミット時点のファイル内容を取得
-    const committedContent = await getFileAtCommit(
-      git,
-      "HEAD",
-      entry.relativePath,
-    );
-
-    if (!committedContent) {
+    // Working tree-first: ファイルシステムから読み込む
+    if (!existsSync(entry.filePath)) {
       errors.push({
         id: dep.id,
         error: new DependencyNotFoundError(dep.id),
@@ -65,54 +67,29 @@ export async function checkDocDeps(
       continue;
     }
 
-    // コミット済みコンテンツをパースして versionPath とバージョンを取得
-    const { version: committedVersion, commitHash } =
-      extractVersionFromCommittedContent(committedContent, entry.relativePath);
-
-    // 依存先の最新コミットハッシュを取得
-    let latestHash: string | null = commitHash;
-    if (!latestHash) {
-      try {
-        const log = await git.log({ file: entry.relativePath, maxCount: 1 });
-        latestHash = log.latest?.hash?.slice(0, 7) ?? null;
-      } catch {
-        latestHash = null;
+    let depDoc;
+    try {
+      depDoc = parseFile(entry.filePath, cwd);
+    } catch (e) {
+      if (e instanceof InvalidFrontMatterError) {
+        errors.push({ id: dep.id, error: e });
+        continue;
       }
+      throw e;
     }
 
-    statuses.push(detectUpdate(dep, committedVersion, latestHash, strict));
+    const currentVersion = resolveVersion(depDoc);
+
+    // 未コミットの変更があるか確認
+    const isWorkTree = await isFileModifiedInWorkingTree(git, entry.relativePath);
+
+    // コミットハッシュ（Working tree 変更がない場合のみ取得）
+    const commitHash = isWorkTree
+      ? null
+      : await getLatestCommitHash(git, entry.relativePath);
+
+    statuses.push(detectUpdate(dep, currentVersion, commitHash, isWorkTree, strict));
   }
 
   return { doc, statuses, errors };
-}
-
-/**
- * コミット済みファイルコンテンツから versionPath とバージョンを抽出する
- */
-function extractVersionFromCommittedContent(
-  content: string,
-  relativePath: string,
-): { version: string | null; commitHash: string | null } {
-  try {
-    // .md ファイルの場合はフロントマター部分を抽出
-    let yamlContent = content;
-    if (relativePath.endsWith(".md")) {
-      const match = /^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/.exec(content);
-      yamlContent = match ? (match[1] ?? "") : "";
-    }
-
-    const yamlDoc = parseDocument(yamlContent);
-    if (yamlDoc.errors.length > 0) return { version: null, commitHash: null };
-
-    const raw = (yamlDoc.toJSON() ?? {}) as Record<string, unknown>;
-    const versionPath =
-      typeof raw["x-st-version-path"] === "string"
-        ? raw["x-st-version-path"]
-        : "version";
-
-    const version = resolveVersionFromRaw(raw, versionPath);
-    return { version, commitHash: null };
-  } catch {
-    return { version: null, commitHash: null };
-  }
 }

@@ -1,19 +1,6 @@
 import type { Config } from "./config.js";
 import type { Dependency } from "./document.js";
 
-/** コマンド実行時のオプション (check-deps 用) */
-export type CheckDepsOptions = {
-  readonly strict?: boolean;
-};
-
-/** コマンド実行時のオプション (update 用) */
-export type UpdateOptions = {
-  readonly version?: string;
-  readonly addDeps?: readonly string[];
-  readonly removeDeps?: readonly string[];
-  readonly upgradeDeps?: boolean;
-};
-
 /** コマンド引数の構造化表現 */
 export type CommandArgs = {
   readonly file?: string;
@@ -25,11 +12,13 @@ export type CommandOptions = {
   readonly depsStructured?: readonly Dependency[];
   readonly version?: string;
   readonly strict?: boolean;
-  readonly upgradeDeps?: boolean;
-  readonly addDeps?: readonly string[];
-  readonly removeDeps?: readonly string[];
   readonly allowCycles?: boolean;
   readonly format?: string;
+  readonly dryRun?: boolean;
+  readonly only?: string;
+  readonly major?: boolean;
+  readonly minor?: boolean;
+  readonly patch?: boolean;
 };
 
 /** コンテキスト情報 (spec §4) */
@@ -63,7 +52,7 @@ export type Context = {
     readonly args: CommandArgs;
     readonly options: CommandOptions;
   };
-  readonly macro: {
+  readonly utils: {
     readonly nanoid: string;
   };
 };

@@ -6,16 +6,17 @@ import type { ParsedDocument } from "../types/document.js";
 import { resolveVersion } from "../version/version-resolver.js";
 
 export type CommandName =
-  | "add"
-  | "update"
+  | "link"
+  | "unlink"
+  | "bump"
+  | "sync"
+  | "status"
+  | "list"
+  | "dependents"
+  | "log"
   | "init"
-  | "check-deps"
-  | "show-deps"
-  | "find-dependents"
   | "verify"
-  | "list-versions"
-  | "graph"
-  | "diff";
+  | "graph";
 
 type BuildContextOptions = {
   readonly config: Config;
@@ -90,12 +91,16 @@ export function buildContext(opts: BuildContextOptions): Context {
         ...(typeof options["deps"] === "string" && { deps: options["deps"] }),
         ...(typeof options["version"] === "string" && { version: options["version"] }),
         ...(typeof options["strict"] === "boolean" && { strict: options["strict"] }),
-        ...(typeof options["upgradeDeps"] === "boolean" && { upgradeDeps: options["upgradeDeps"] }),
         ...(typeof options["allowCycles"] === "boolean" && { allowCycles: options["allowCycles"] }),
         ...(typeof options["format"] === "string" && { format: options["format"] }),
+        ...(typeof options["dryRun"] === "boolean" && { dryRun: options["dryRun"] }),
+        ...(typeof options["only"] === "string" && { only: options["only"] }),
+        ...(typeof options["major"] === "boolean" && { major: options["major"] }),
+        ...(typeof options["minor"] === "boolean" && { minor: options["minor"] }),
+        ...(typeof options["patch"] === "boolean" && { patch: options["patch"] }),
       },
     },
-    macro: {
+    utils: {
       nanoid: nanoid(),
     },
   };

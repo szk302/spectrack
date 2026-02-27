@@ -1,6 +1,5 @@
 import { existsSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { simpleGit } from "simple-git";
 import { stringify } from "yaml";
 import type { Config } from "../../types/config.js";
 import { DEFAULT_CONFIG } from "../../types/config.js";
@@ -12,7 +11,6 @@ import { parseFile } from "../../frontmatter/parser.js";
 import { writeDocument, addFrontMatter } from "../../frontmatter/writer.js";
 import { buildContext } from "../../context/context-builder.js";
 import { expandTemplate } from "../../frontmatter/template-engine.js";
-import { createGitClient } from "../../git/git-client.js";
 import {
   SPECTRACK_CONFIG_FILE,
   SPECTRACKIGNORE_FILE,
@@ -38,6 +36,7 @@ documentRootPath: doc         # ドキュメントルートパス (default: doc)
 
 export type InitOptions = {
   readonly addFrontmatter: boolean;
+  readonly dryRun?: boolean;
 };
 
 export async function runInit(
@@ -45,14 +44,6 @@ export async function runInit(
   cwd: string = process.cwd(),
 ): Promise<ExitCode> {
   let errorCount = 0;
-
-  // Git 確認
-  try {
-    await createGitClient(cwd);
-  } catch (err) {
-    printError(err instanceof Error ? err.message : String(err));
-    return ExitCode.ERROR;
-  }
 
   // 設定ファイルの作成または確認
   const configPath = join(cwd, SPECTRACK_CONFIG_FILE);
@@ -119,7 +110,9 @@ export async function runInit(
       }
 
       const updated = addFrontMatter(parsed, initialFields);
-      writeDocument(updated);
+      if (!options.dryRun) {
+        writeDocument(updated);
+      }
       addedCount++;
     } catch (err) {
       printError(
