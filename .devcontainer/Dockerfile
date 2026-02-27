@@ -14,11 +14,13 @@ ARG YQ_VERSION=v4.47.2
 ARG ARCH=x64
 ARG Q_VERSION=1.17.1
 ARG CLAUDE_CODE_VERSION=2.0.25
+# see: https://github.com/google-gemini/gemini-cli/releases
+ARG GEMINI_VERSION=0.16.0
 ARG LEFT_HOOK_VERSION=2.0.0
-ARG GH_VERSION=2.82.1
+ARG GH_VERSION=2.83.1
 
 LABEL maintainer="69619077+szk302@users.noreply.github.com" \
-      description="spectrack developer image" \
+      description="spectrack2 developer image" \
       version="1.0.0"
 
 ENV DEVCONTAINER=true \
@@ -86,63 +88,6 @@ RUN TMP_DIR=$(mktemp -d) && \
       node --version && npm --version
 
 # -------------------------------------------------------------------
-# Bun
-# -------------------------------------------------------------------
-RUN TMP_DIR=$(mktemp -d) && \
-    export TMP_DIR && \
-    ( \
-      pushd "${TMP_DIR}" && \
-      BUN_FILE="bun-linux-${ARCH}-baseline" && \
-      BUN_GPG="F3DCC08A8572C0749B3E18888EAB4D40A7B22B59" && \
-      gpg --batch --keyserver hkps://keys.openpgp.org --recv-keys "${BUN_GPG}" && \
-      curl --proto '=https' --tlsv1.2 -fsSLO "https://github.com/oven-sh/bun/releases/download/bun-v${BUN_VERSION}/${BUN_FILE}.zip" && \
-      curl --proto '=https' --tlsv1.2 -fsSLO "https://github.com/oven-sh/bun/releases/download/bun-v${BUN_VERSION}/SHASUMS256.txt.asc" && \
-      gpg --batch --decrypt --output SHASUMS256.txt SHASUMS256.txt.asc && \
-      grep "${BUN_FILE}.zip" SHASUMS256.txt | sha256sum -c - && \
-      unzip "${BUN_FILE}.zip" && \
-      mv "${BUN_FILE}/bun" /usr/local/bin/bun && \
-      chmod +x /usr/local/bin/bun && \
-      popd \
-    ) && \
-      rm -rf "${TMP_DIR}" && \
-      bun --version
-
-# -------------------------------------------------------------------
-# Deno
-# -------------------------------------------------------------------
-RUN TMP_DIR=$(mktemp -d) && \
-    export TMP_DIR && \
-    ( \
-      pushd "$TMP_DIR" && \
-      curl --proto '=https' --tlsv1.2 -fsSLO "https://deno.land/install.sh" && \
-      curl --proto '=https' --tlsv1.2 -fsSLO "https://raw.githubusercontent.com/denoland/deno_install/master/SHA256SUM" && \
-      grep "install.sh" SHA256SUM | sha256sum -c && \
-      DENO_INSTALL=/usr/local bash ./install.sh --version "v${DENO_VERSION}" && \
-      popd \
-    ) && \
-    rm -rf "${TMP_DIR}" && \
-    deno --version
-
-# -------------------------------------------------------------------
-# Rust
-# -------------------------------------------------------------------
-RUN TMP_DIR=$(mktemp -d) && \
-    export TMP_DIR && \
-    ( \
-      pushd "${TMP_DIR}" && \
-      RUST_FILE="rust-${RUST_VERSION}-x86_64-unknown-linux-gnu.tar.gz" && \
-      curl --proto '=https' --tlsv1.2 -fsSL https://keybase.io/rust/pgp_keys.asc | gpg --import && \
-      curl --proto '=https' --tlsv1.2 -fsSLO "https://static.rust-lang.org/dist/${RUST_FILE}" && \
-      curl --proto '=https' --tlsv1.2 -fsSLO "https://static.rust-lang.org/dist/${RUST_FILE}.asc" && \
-      gpg --verify ${RUST_FILE}.asc ${RUST_FILE} && \
-      tar -xzf "${RUST_FILE}" --strip-components=1 && \
-      ./install.sh --verbose && \
-      popd \
-    ) && \
-    rm -rf "${TMP_DIR}" && \
-    cargo --version
-
-# -------------------------------------------------------------------
 # uv
 # -------------------------------------------------------------------
 RUN TMP_DIR=$(mktemp -d) && \
@@ -158,54 +103,6 @@ RUN TMP_DIR=$(mktemp -d) && \
     ) && \
     rm -rf "${TMP_DIR}" && \
     uv --version
-
-# -------------------------------------------------------------------
-# GitHub CLI
-# -------------------------------------------------------------------
-RUN curl --proto '=https' --tlsv1.2 -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \
-      -o /etc/apt/keyrings/githubcli-archive-keyring.gpg && \
-    chmod a+r /etc/apt/keyrings/githubcli-archive-keyring.gpg && \
-    echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" \
-      | tee /etc/apt/sources.list.d/github-cli.list && \
-    apt-get update && \
-    apt-get install --no-install-recommends -y "gh=${GH_VERSION}" && \
-    rm -rf /var/lib/apt/lists/* && \
-    gh --version
-
-# -------------------------------------------------------------------
-# Lefthook
-# -------------------------------------------------------------------
-RUN curl --proto '=https' --tlsv1.2 -fsSL https://dl.cloudsmith.io/public/evilmartians/lefthook/gpg.A05F5DDE3A0BB1D2.key \
-    | gpg --dearmor >> /etc/apt/keyrings/evilmartians-lefthook-archive-keyring.gpg && \
-    chmod a+r /etc/apt/keyrings/evilmartians-lefthook-archive-keyring.gpg && \
-    echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/evilmartians-lefthook-archive-keyring.gpg] https://dl.cloudsmith.io/public/evilmartians/lefthook/deb/debian bookworm main" \
-      | tee /etc/apt/sources.list.d/evilmartians-lefthook.list && \
-    apt-get update && \
-    apt-get install --no-install-recommends -y "lefthook=${LEFT_HOOK_VERSION}" && \
-    rm -rf /var/lib/apt/lists/* && \
-    lefthook --version
-
-# -------------------------------------------------------------------
-# git-cliff
-# -------------------------------------------------------------------
-RUN TMP_DIR=$(mktemp -d) && \
-    export TMP_DIR && \
-    ( \
-      pushd "${TMP_DIR}" && \
-      GIT_CLIFF_FILE="git-cliff-${GIT_CLIFF_VERSION}-x86_64-unknown-linux-gnu.tar.gz" && \
-      PGP_KEY="1D2D410A741137EBC544826F4A92FA17B6619297" && \
-      gpg --batch --keyserver hkps://keyserver.ubuntu.com --recv-key "${PGP_KEY}" && \
-      curl --proto '=https' --tlsv1.2 -fsSLO "https://github.com/orhun/git-cliff/releases/download/v${GIT_CLIFF_VERSION}/${GIT_CLIFF_FILE}" && \
-      curl --proto '=https' --tlsv1.2 -fsSLO "https://github.com/orhun/git-cliff/releases/download/v${GIT_CLIFF_VERSION}/${GIT_CLIFF_FILE}.sig" && \
-      curl --proto '=https' --tlsv1.2 -fsSLO "https://github.com/orhun/git-cliff/releases/download/v${GIT_CLIFF_VERSION}/${GIT_CLIFF_FILE}.sha512" && \
-      gpg --verify "${GIT_CLIFF_FILE}.sig" "${GIT_CLIFF_FILE}" && \
-      grep "${GIT_CLIFF_FILE}" "${GIT_CLIFF_FILE}.sha512" | sha512sum -c - && \
-      tar -xzf "${GIT_CLIFF_FILE}" --strip-components=1 && \
-      mv git-cliff git-cliff-completions git-cliff-mangen /usr/local/bin/ && \
-      popd \
-    ) && \
-      rm -rf "${TMP_DIR}" && \
-      git-cliff --version
 
 # -------------------------------------------------------------------
 # yq
@@ -268,9 +165,13 @@ vK6FgOkDawgP0NPIP2oA/jIAO4gsAntuQgMOsPunEdDeji2t+AhV02+DQIsXZpoB\n\
     q --version
 
 # Claude Code CLI
-RUN npm install -g "@anthropic-ai/claude-code@${CLAUDE_CODE_VERSION}" && \
+RUN npm install -g "@anthropic-ai/claude-code" && \
     claude --version
 COPY --chown=${USER_NAME}:${USER_NAME} .claude /home/${USER_NAME}/.claude
+
+# Gemini CLI
+RUN npm install -g "@google/gemini-cli" && \
+    gemini --version
 
 RUN npm i -g backlog.md
 

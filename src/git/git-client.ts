@@ -1,0 +1,123 @@
+import { simpleGit, type SimpleGit } from "simple-git";
+import {
+  GitNoCommitsError,
+  GitNotInitializedError,
+} from "../types/errors.js";
+
+/**
+ * Git クライアントを初期化して返す
+ * リポジトリが初期化されていない場合はエラーを投げる
+ */
+export async function createGitClient(cwd: string): Promise<SimpleGit> {
+  const git = simpleGit(cwd);
+
+  try {
+    const isRepo = await git.checkIsRepo();
+    if (!isRepo) {
+      throw new GitNotInitializedError();
+    }
+  } catch (err) {
+    if (err instanceof GitNotInitializedError) throw err;
+    throw new GitNotInitializedError();
+  }
+
+  // コミットが存在するか確認
+  try {
+    await git.log({ maxCount: 1 });
+  } catch (err) {
+    const message =
+      err instanceof Error ? err.message : String(err);
+    throw new GitNoCommitsError(message);
+  }
+
+  return git;
+}
+
+/**
+ * 指定ファイルの最新コミットハッシュ（短縮版）を取得する
+ */
+export async function getLatestCommitHash(
+  git: SimpleGit,
+  filePath: string,
+): Promise<string | null> {
+  try {
+    const log = await git.log({
+      file: filePath,
+      maxCount: 1,
+      format: { hash: "%H", abbrevHash: "%h" },
+    });
+    return log.latest?.hash?.slice(0, 7) ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * 指定コミット時点のファイル内容を取得する
+ * @param git - SimpleGit インスタンス
+ * @param commitHash - コミットハッシュ (HEAD 等も可)
+ * @param relativePath - リポジトリルートからの相対パス
+ */
+export async function getFileAtCommit(
+  git: SimpleGit,
+  commitHash: string,
+  relativePath: string,
+): Promise<string | null> {
+  try {
+    const content = await git.show([`${commitHash}:${relativePath}`]);
+    return content;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * git log -S でIDを含む過去のファイルパスを推定する
+ * 削除されたファイルの追跡に使用
+ */
+export async function findHistoricalPath(
+  git: SimpleGit,
+  searchString: string,
+): Promise<string | null> {
+  try {
+    const result = await git.raw([
+      "log",
+      `-S${searchString}`,
+      "--name-only",
+      "--format=%H",
+      "--diff-filter=D",
+    ]);
+
+    const lines = result.split("\n").filter((l) => l.trim().length > 0);
+    // コミットハッシュでない行がファイルパス
+    for (const line of lines) {
+      if (!/^[0-9a-f]{40}$/i.test(line.trim())) {
+        return line.trim();
+      }
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * HEAD の直前コミットハッシュを取得する
+ */
+export async function getPreviousCommitHash(
+  git: SimpleGit,
+  filePath: string,
+): Promise<string | null> {
+  try {
+    const log = await git.log({
+      file: filePath,
+      maxCount: 2,
+      format: { hash: "%H" },
+    });
+    const all = log.all;
+    if (all.length < 2) return null;
+    return all[1]?.hash?.slice(0, 7) ?? null;
+  } catch {
+    return null;
+  }
+}

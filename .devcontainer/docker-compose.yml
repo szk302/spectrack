@@ -1,5 +1,5 @@
 services:
-  spectrack:
+  spectrack3:
     build:
       context: .
       args:

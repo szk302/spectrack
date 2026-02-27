@@ -1,7 +1,7 @@
 {
-  "name": "spectrack",
+  "name": "spectrack3",
   "dockerComposeFile": "./docker-compose.yml",
-  "service": "spectrack",
+  "service": "spectrack3",
   "workspaceFolder": "/home/dev/work",
   "remoteUser": "dev",
   "customizations": {
