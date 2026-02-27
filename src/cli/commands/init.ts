@@ -44,42 +44,45 @@ export async function runInit(
   options: InitOptions,
   cwd: string = process.cwd(),
 ): Promise<ExitCode> {
-  // 設定ファイルの作成（どのモードでも実行）
+  // 設定ファイルの作成（--dry-run 時は書き込みをスキップ）
   const configPath = join(cwd, SPECTRACK_CONFIG_FILE);
-  let configCreated = false;
+  let configWillBeCreated = false;
   if (!configExists(cwd)) {
-    writeFileSync(configPath, INIT_CONFIG_TEMPLATE, "utf-8");
-    configCreated = true;
-    console.log(
-      `⚙️  設定ファイル: ${SPECTRACK_CONFIG_FILE} を作成しました`,
-    );
-    console.log(
-      `📝 テンプレート設定をコメント状態で記載しました。必要に応じて編集してください。`,
-    );
+    configWillBeCreated = true;
+    if (!options.dryRun) {
+      writeFileSync(configPath, INIT_CONFIG_TEMPLATE, "utf-8");
+      console.log(`⚙️  設定ファイル: ${SPECTRACK_CONFIG_FILE} を作成しました`);
+      console.log(
+        `📝 テンプレート設定をコメント状態で記載しました。必要に応じて編集してください。`,
+      );
+    } else {
+      console.log(
+        `[DRY RUN] ⚙️  設定ファイル: ${SPECTRACK_CONFIG_FILE} を作成します`,
+      );
+    }
   }
 
-  // .spectrackignore がない場合は空ファイル作成
+  // .spectrackignore がない場合は作成（--dry-run 時はスキップ）
   const ignorePath = join(cwd, SPECTRACKIGNORE_FILE);
-  if (!existsSync(ignorePath)) {
+  if (!existsSync(ignorePath) && !options.dryRun) {
     writeFileSync(ignorePath, "# spectrack ignore file\n", "utf-8");
   }
 
-  // 引数なし・--all なし → 設定ファイルのみ作成して終了
-  const hasFiles = options.files !== undefined && options.files.length > 0;
-  if (!hasFiles && !options.all) {
-    if (!configCreated) {
+  // 引数なし・--all なし → 設定ファイルのみ確認して終了
+  if ((!options.files || options.files.length === 0) && !options.all) {
+    if (!configWillBeCreated) {
       console.log(`✅ ${SPECTRACK_CONFIG_FILE} は既に存在します`);
     }
     return ExitCode.SUCCESS;
   }
 
-  // 設定を読み込む
+  // 設定を読み込む（--dry-run でファイルが未作成でも loadConfig は default を返す）
   const config = loadConfig(cwd, false);
 
   // 対象ファイルの決定
   let filePaths: readonly string[];
-  if (hasFiles) {
-    filePaths = options.files!;
+  if (options.files && options.files.length > 0) {
+    filePaths = options.files;
   } else {
     // --all: ドキュメントルート以下のすべてをスキャン
     const documentRootPath = join(cwd, config.documentRootPath);

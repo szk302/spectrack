@@ -139,6 +139,22 @@ describe("spectrack init", () => {
     expect(content).not.toContain("x-st-id");
   });
 
+  it("--dry-run は設定ファイルを作成しない", async () => {
+    fixture = await createGitFixture({
+      "doc/prd.md": `# PRD\nThis is a product requirements document.\n`,
+      // spectrack.yml は存在しない
+    });
+
+    const exitCode = await runInit({ all: true, dryRun: true }, fixture.dir);
+
+    expect(exitCode).toBe(0);
+    // --dry-run なので設定ファイルが作成されていない
+    expect(existsSync(join(fixture.dir, SPECTRACK_CONFIG_FILE))).toBe(false);
+    // フロントマターも追加されていない
+    const content = readFileSync(join(fixture.dir, "doc/prd.md"), "utf-8");
+    expect(content).not.toContain("x-st-id");
+  });
+
   it("存在しないファイルを指定した場合はエラー", async () => {
     fixture = await createGitFixture({
       "spectrack.yml": `frontMatterKeyPrefix: x-st-\ndocumentRootPath: doc\n`,

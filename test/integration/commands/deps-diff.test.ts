@@ -1,4 +1,4 @@
-import { describe, it, expect, afterEach } from "vitest";
+import { describe, it, expect, afterEach, vi } from "vitest";
 import { join } from "node:path";
 import {
   createGitFixture,
@@ -28,11 +28,24 @@ describe("spectrack deps-diff", () => {
       "doc/prd.md": `---\nx-st-id: prd-001\nx-st-version-path: version\nversion: 1.1.0\n---\n# PRD\nOriginal content.\nNew feature added.\n`,
     });
 
-    const ctx = await initCommandContext(fixture.dir, false);
-    const filePath = join(fixture.dir, "doc/uc.md");
-    const exitCode = await runDepsDiff(filePath, ctx);
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    try {
+      const ctx = await initCommandContext(fixture.dir, false);
+      const filePath = join(fixture.dir, "doc/uc.md");
+      const exitCode = await runDepsDiff(filePath, ctx);
 
-    expect(exitCode).toBe(0);
+      expect(exitCode).toBe(0);
+
+      const output = logSpy.mock.calls.map((c) => String(c[0])).join("\n");
+      // バージョンヘッダーに依存先IDと参照→現在バージョンが含まれる
+      expect(output).toContain("prd-001");
+      expect(output).toContain("1.0.0");
+      expect(output).toContain("1.1.0");
+      // セパレーターが出力されている
+      expect(output).toContain("━");
+    } finally {
+      logSpy.mockRestore();
+    }
   });
 
   it("依存先が同じバージョンの場合はスキップする", async () => {

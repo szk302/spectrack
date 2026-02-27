@@ -88,18 +88,17 @@ export async function runLink(
     return ExitCode.ERROR;
   }
 
-  // 既存の依存関係にマージ（重複IDは上書き）
-  const existingDeps = [...parsed.frontMatter.dependencies];
-  for (const newDep of newDeps) {
-    const existingIdx = existingDeps.findIndex((d) => d.id === newDep.id);
-    if (existingIdx >= 0) {
-      existingDeps[existingIdx] = newDep;
-    } else {
-      existingDeps.push(newDep);
-    }
-  }
+  // 既存の依存関係にマージ（重複IDは上書き）—イミュータブルパターン
+  const existingDeps = parsed.frontMatter.dependencies;
+  const merged = existingDeps.map(
+    (d) => newDeps.find((n) => n.id === d.id) ?? d,
+  );
+  const added = newDeps.filter(
+    (n) => !existingDeps.some((d) => d.id === n.id),
+  );
+  const mergedDeps = [...merged, ...added];
 
-  const updated = updateFrontMatter(parsed, { "x-st-dependencies": existingDeps });
+  const updated = updateFrontMatter(parsed, { "x-st-dependencies": mergedDeps });
 
   const id = updated.frontMatter.id ?? "(未設定)";
 
