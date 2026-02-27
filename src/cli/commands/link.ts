@@ -4,17 +4,9 @@ import type { Dependency } from "../../types/document.js";
 import { ExitCode } from "../../output/exit-code.js";
 import { printError, printTreeItems } from "../../output/formatter.js";
 import { parseFile } from "../../frontmatter/parser.js";
-import {
-  addFrontMatter,
-  updateFrontMatter,
-  writeDocument,
-} from "../../frontmatter/writer.js";
-import { buildContext } from "../../context/context-builder.js";
-import { expandTemplate } from "../../frontmatter/template-engine.js";
+import { updateFrontMatter, writeDocument } from "../../frontmatter/writer.js";
 import { resolveVersion } from "../../version/version-resolver.js";
 import type { CommandContext } from "../runner.js";
-import { DEFAULT_CONFIG } from "../../types/config.js";
-import type { TargetExtension } from "../../config/defaults.js";
 
 export type LinkOptions = {
   readonly deps: string;
@@ -87,11 +79,14 @@ export async function runLink(
   // ターゲットファイルをパース
   const parsed = parseFile(filePath, ctx.cwd);
   const relPath = relative(ctx.cwd, filePath);
-  const ext = parsed.ext as TargetExtension;
-  const template =
-    ctx.config.frontMatterTemplate[ext] ??
-    ctx.config.frontMatterTemplate.md ??
-    DEFAULT_CONFIG.frontMatterTemplate.md!;
+
+  // フロントマターが未設定の場合はエラー（事前に init が必要）
+  if (!parsed.frontMatter.id) {
+    printError(
+      `ERROR: [${relPath}] にフロントマターが設定されていません。先に spectrack init <file> を実行してください`,
+    );
+    return ExitCode.ERROR;
+  }
 
   // 既存の依存関係にマージ（重複IDは上書き）
   const existingDeps = [...parsed.frontMatter.dependencies];
@@ -104,28 +99,7 @@ export async function runLink(
     }
   }
 
-  let updated;
-  if (!parsed.frontMatter.id) {
-    // フロントマターが未設定 → 新規作成
-    const context = buildContext({
-      config: ctx.config,
-      doc: parsed,
-      commandName: "link",
-      args: { file: relPath },
-      options: { deps: options.deps },
-      cwd: ctx.cwd,
-    });
-
-    const initialFields: Record<string, unknown> = {};
-    for (const [key, value] of Object.entries(template)) {
-      initialFields[key] =
-        typeof value === "string" ? expandTemplate(value, context) : value;
-    }
-    initialFields["x-st-dependencies"] = existingDeps;
-    updated = addFrontMatter(parsed, initialFields);
-  } else {
-    updated = updateFrontMatter(parsed, { "x-st-dependencies": existingDeps });
-  }
+  const updated = updateFrontMatter(parsed, { "x-st-dependencies": existingDeps });
 
   const id = updated.frontMatter.id ?? "(未設定)";
 

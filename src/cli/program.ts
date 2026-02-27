@@ -6,8 +6,9 @@ import { initCommandContext } from "./runner.js";
 import { runInit } from "./commands/init.js";
 import { runVerify } from "./commands/verify.js";
 import { runGraph } from "./commands/graph.js";
-// v2 commands
+// v2/v3 commands
 import { runLink } from "./commands/link.js";
+import { runDepsDiff } from "./commands/deps-diff.js";
 import { runUnlink } from "./commands/unlink.js";
 import { runBump } from "./commands/bump.js";
 import { runSync } from "./commands/sync.js";
@@ -26,19 +27,23 @@ export function createProgram(): Command {
 
   // ── v2 commands ──────────────────────────────────────
 
-  // spectrack init (updated: --dry-run support)
+  // spectrack init
   program
-    .command("init")
+    .command("init [files...]")
     .description("設定ファイルを作成し、ドキュメントを初期化する")
-    .option("--add-frontmatter", "フロントマターにメタデータを追加する")
+    .option("--all", "プロジェクト内の全ファイルにフロントマターを一括追加する")
     .option("--dry-run", "実際の書き込みを行わず変更内容を表示する")
-    .action(async (opts: { addFrontmatter?: boolean; dryRun?: boolean }) => {
+    .action(async (files: string[], opts: { all?: boolean; dryRun?: boolean }) => {
+      const cwd = process.cwd();
       const code = await runInit(
         {
-          addFrontmatter: opts.addFrontmatter ?? false,
+          ...(files.length > 0 && {
+            files: files.map((f) => resolve(cwd, f)),
+          }),
+          all: opts.all ?? false,
           dryRun: opts.dryRun ?? false,
         },
-        process.cwd(),
+        cwd,
       );
       process.exit(code);
     });
@@ -165,6 +170,18 @@ export function createProgram(): Command {
       const filePath = resolve(process.cwd(), file);
       const code = await withContext(true, async (ctx) =>
         runDependents(filePath, ctx),
+      );
+      process.exit(code);
+    });
+
+  // spectrack deps-diff
+  program
+    .command("deps-diff <file>")
+    .description("依存先ドキュメントの参照バージョンからの差分を表示する")
+    .action(async (file: string) => {
+      const filePath = resolve(process.cwd(), file);
+      const code = await withContext(true, async (ctx) =>
+        runDepsDiff(filePath, ctx),
       );
       process.exit(code);
     });

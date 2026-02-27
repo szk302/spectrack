@@ -115,7 +115,7 @@ describe("spectrack link", () => {
     expect(content).toBe(originalContent);
   });
 
-  it("フロントマターがないファイルに自動生成してリンクする", async () => {
+  it("フロントマターがないファイルへの link はエラーになる", async () => {
     fixture = await createGitFixture({
       "spectrack.yml": `frontMatterKeyPrefix: x-st-\ndocumentRootPath: doc\n`,
       "doc/prd.md": `---\nx-st-id: prd-001\nx-st-version-path: version\nversion: 1.0.0\n---\n# PRD\n`,
@@ -126,12 +126,10 @@ describe("spectrack link", () => {
     const filePath = join(fixture.dir, "doc/uc.md");
     const exitCode = await runLink(filePath, { deps: "doc/prd.md" }, ctx);
 
-    expect(exitCode).toBe(0);
+    expect(exitCode).toBe(1);
+    // ファイルは変更されていない
     const content = readFileSync(filePath, "utf-8");
-    // フロントマターが自動生成されている
-    expect(content).toContain("x-st-id");
-    // 依存関係も追加されている
-    expect(content).toContain("prd-001");
+    expect(content).not.toContain("x-st-id");
   });
 
   it("複数の依存先をカンマ区切りで指定してリンクする", async () => {

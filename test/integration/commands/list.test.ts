@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach } from "vitest";
-import { writeFileSync, join as pathJoin } from "node:fs";
+import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   createGitFixture,

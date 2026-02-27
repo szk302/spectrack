@@ -1,7 +1,5 @@
 import { existsSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
-import { stringify } from "yaml";
-import type { Config } from "../../types/config.js";
+import { join, relative } from "node:path";
 import { DEFAULT_CONFIG } from "../../types/config.js";
 import { ExitCode } from "../../output/exit-code.js";
 import { loadConfig, configExists } from "../../config/loader.js";
@@ -16,7 +14,7 @@ import {
   SPECTRACKIGNORE_FILE,
 } from "../../config/defaults.js";
 import type { TargetExtension } from "../../config/defaults.js";
-import { printSuccess, printError } from "../../output/formatter.js";
+import { printError } from "../../output/formatter.js";
 
 const INIT_CONFIG_TEMPLATE = `# spectrack 設定ファイル
 frontMatterKeyPrefix: x-st-   # フロントマターキープレフィックス (default: x-st-)
@@ -35,7 +33,10 @@ documentRootPath: doc         # ドキュメントルートパス (default: doc)
 `;
 
 export type InitOptions = {
-  readonly addFrontmatter: boolean;
+  /** 初期化するファイルの絶対パス一覧（指定がなければ引数なしモード） */
+  readonly files?: readonly string[];
+  /** 全対象ファイルを一括初期化する */
+  readonly all?: boolean;
   readonly dryRun?: boolean;
 };
 
@@ -43,12 +44,12 @@ export async function runInit(
   options: InitOptions,
   cwd: string = process.cwd(),
 ): Promise<ExitCode> {
-  let errorCount = 0;
-
-  // 設定ファイルの作成または確認
+  // 設定ファイルの作成（どのモードでも実行）
   const configPath = join(cwd, SPECTRACK_CONFIG_FILE);
+  let configCreated = false;
   if (!configExists(cwd)) {
     writeFileSync(configPath, INIT_CONFIG_TEMPLATE, "utf-8");
+    configCreated = true;
     console.log(
       `⚙️  設定ファイル: ${SPECTRACK_CONFIG_FILE} を作成しました`,
     );
@@ -63,35 +64,55 @@ export async function runInit(
     writeFileSync(ignorePath, "# spectrack ignore file\n", "utf-8");
   }
 
-  if (!options.addFrontmatter) {
+  // 引数なし・--all なし → 設定ファイルのみ作成して終了
+  const hasFiles = options.files !== undefined && options.files.length > 0;
+  if (!hasFiles && !options.all) {
+    if (!configCreated) {
+      console.log(`✅ ${SPECTRACK_CONFIG_FILE} は既に存在します`);
+    }
     return ExitCode.SUCCESS;
   }
 
   // 設定を読み込む
   const config = loadConfig(cwd, false);
 
-  // ファイルスキャン
-  const documentRootPath = join(cwd, config.documentRootPath);
-  const ig = loadIgnore(cwd);
-  const filePaths = scanFiles(documentRootPath, ig, cwd);
+  // 対象ファイルの決定
+  let filePaths: readonly string[];
+  if (hasFiles) {
+    filePaths = options.files!;
+  } else {
+    // --all: ドキュメントルート以下のすべてをスキャン
+    const documentRootPath = join(cwd, config.documentRootPath);
+    const ig = loadIgnore(cwd);
+    filePaths = scanFiles(documentRootPath, ig, cwd);
+  }
 
-  let addedCount = 0;
-  let skippedCount = 0;
+  let errorCount = 0;
+  const initializedFiles: { relPath: string; id: string }[] = [];
 
   for (const filePath of filePaths) {
+    if (!existsSync(filePath)) {
+      printError(
+        `ERROR: ファイル [${relative(cwd, filePath)}] が見つかりません`,
+      );
+      errorCount++;
+      continue;
+    }
+
     try {
       const parsed = parseFile(filePath, cwd);
 
       // 既に x-st-id が存在する場合はスキップ
       if (parsed.frontMatter.id) {
-        skippedCount++;
         continue;
       }
 
       const ext = parsed.ext as TargetExtension;
-      const template = config.frontMatterTemplate[ext] ?? config.frontMatterTemplate.md ?? DEFAULT_CONFIG.frontMatterTemplate.md!;
+      const template =
+        config.frontMatterTemplate[ext] ??
+        config.frontMatterTemplate.md ??
+        DEFAULT_CONFIG.frontMatterTemplate.md!;
 
-      // コンテキストを構築してテンプレートを展開
       const ctx = buildContext({
         config,
         doc: parsed,
@@ -99,34 +120,39 @@ export async function runInit(
         cwd,
       });
 
-      // テンプレートの各値を展開
       const initialFields: Record<string, unknown> = {};
       for (const [key, value] of Object.entries(template)) {
-        if (typeof value === "string") {
-          initialFields[key] = expandTemplate(value, ctx);
-        } else {
-          initialFields[key] = value;
-        }
+        initialFields[key] =
+          typeof value === "string" ? expandTemplate(value, ctx) : value;
       }
 
       const updated = addFrontMatter(parsed, initialFields);
       if (!options.dryRun) {
         writeDocument(updated);
       }
-      addedCount++;
+
+      const id = updated.frontMatter.id ?? "(ID未設定)";
+      const relPath = relative(cwd, filePath);
+      initializedFiles.push({ relPath, id });
     } catch (err) {
       printError(
-        `❌ ${filePath}: ${err instanceof Error ? err.message : String(err)}`,
+        `❌ ${relative(cwd, filePath)}: ${err instanceof Error ? err.message : String(err)}`,
       );
       errorCount++;
     }
   }
 
-  console.log(`\n✅ 初期化完了`);
-  console.log(`  📄 初期化対象ファイル数: ${filePaths.length} 個`);
-  console.log(`  ✨ メタデータ追加: ${addedCount} 個`);
-  console.log(`  ⏭️  スキップ（既に存在）: ${skippedCount} 個`);
-  console.log(`  ❌ エラー: ${errorCount} 個`);
+  if (initializedFiles.length > 0) {
+    const prefix = options.dryRun ? "[DRY RUN] " : "";
+    console.log(`\n✨ ${prefix}以下のファイルを追跡対象として初期化しました:`);
+    for (const { relPath, id } of initializedFiles) {
+      console.log(`  📄 ${relPath} (ID: ${id})`);
+    }
+  } else if (filePaths.length === 0) {
+    console.log(`ℹ️  初期化対象のファイルが見つかりません`);
+  } else if (errorCount === 0) {
+    console.log(`ℹ️  すべてのファイルは既に初期化済みです`);
+  }
 
   return errorCount > 0 ? ExitCode.ERROR : ExitCode.SUCCESS;
 }
