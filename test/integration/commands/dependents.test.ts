@@ -17,7 +17,7 @@ afterEach(() => {
 describe("spectrack dependents", () => {
   it("依存しているドキュメントを表示する", async () => {
     fixture = await createGitFixture({
-      "spectrack.yml": `frontMatterKeyPrefix: x-st-\ndocumentRootPath: doc\n`,
+      "spectrack.yml": `frontMatterKeyPrefix: x-st-\n`,
       "doc/prd.md": `---\nx-st-id: prd-001\nx-st-version-path: version\nversion: 1.0.0\n---\n# PRD\n`,
       "doc/uc.md": `---\nx-st-id: uc-001\nx-st-version-path: version\nx-st-dependencies:\n  - id: prd-001\n    version: 1.0.0\nversion: 1.0.0\n---\n# UC\n`,
     });
@@ -31,7 +31,7 @@ describe("spectrack dependents", () => {
 
   it("複数のドキュメントが依存している場合も表示する", async () => {
     fixture = await createGitFixture({
-      "spectrack.yml": `frontMatterKeyPrefix: x-st-\ndocumentRootPath: doc\n`,
+      "spectrack.yml": `frontMatterKeyPrefix: x-st-\n`,
       "doc/prd.md": `---\nx-st-id: prd-001\nx-st-version-path: version\nversion: 1.0.0\n---\n# PRD\n`,
       "doc/uc1.md": `---\nx-st-id: uc1-001\nx-st-version-path: version\nx-st-dependencies:\n  - id: prd-001\n    version: 1.0.0\nversion: 1.0.0\n---\n# UC1\n`,
       "doc/uc2.md": `---\nx-st-id: uc2-001\nx-st-version-path: version\nx-st-dependencies:\n  - id: prd-001\n    version: 1.0.0\nversion: 1.0.0\n---\n# UC2\n`,
@@ -46,7 +46,7 @@ describe("spectrack dependents", () => {
 
   it("依存しているドキュメントがない場合は SUCCESS", async () => {
     fixture = await createGitFixture({
-      "spectrack.yml": `frontMatterKeyPrefix: x-st-\ndocumentRootPath: doc\n`,
+      "spectrack.yml": `frontMatterKeyPrefix: x-st-\n`,
       "doc/prd.md": `---\nx-st-id: prd-001\nx-st-version-path: version\nversion: 1.0.0\n---\n# PRD\n`,
     });
 
@@ -59,7 +59,7 @@ describe("spectrack dependents", () => {
 
   it("x-st-id がないファイルはエラー", async () => {
     fixture = await createGitFixture({
-      "spectrack.yml": `frontMatterKeyPrefix: x-st-\ndocumentRootPath: doc\n`,
+      "spectrack.yml": `frontMatterKeyPrefix: x-st-\n`,
       "doc/prd.md": `---\nversion: 1.0.0\n---\n# PRD\n`,
     });
 
@@ -72,7 +72,7 @@ describe("spectrack dependents", () => {
 
   it("存在しないファイルはエラー", async () => {
     fixture = await createGitFixture({
-      "spectrack.yml": `frontMatterKeyPrefix: x-st-\ndocumentRootPath: doc\n`,
+      "spectrack.yml": `frontMatterKeyPrefix: x-st-\n`,
     });
 
     const ctx = await initCommandContext(fixture.dir, false);

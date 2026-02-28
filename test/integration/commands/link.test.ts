@@ -18,7 +18,7 @@ afterEach(() => {
 describe("spectrack link", () => {
   it("依存先バージョンを自動取得してリンクする", async () => {
     fixture = await createGitFixture({
-      "spectrack.yml": `frontMatterKeyPrefix: x-st-\ndocumentRootPath: doc\n`,
+      "spectrack.yml": `frontMatterKeyPrefix: x-st-\n`,
       "doc/prd.md": `---\nx-st-id: prd-001\nx-st-version-path: version\nversion: 1.0.0\n---\n# PRD\n`,
       "doc/uc.md": `---\nx-st-id: uc-001\nx-st-version-path: version\nversion: 1.0.0\n---\n# UC\n`,
     });
@@ -35,7 +35,7 @@ describe("spectrack link", () => {
 
   it("バージョン明示指定でリンクする", async () => {
     fixture = await createGitFixture({
-      "spectrack.yml": `frontMatterKeyPrefix: x-st-\ndocumentRootPath: doc\n`,
+      "spectrack.yml": `frontMatterKeyPrefix: x-st-\n`,
       "doc/prd.md": `---\nx-st-id: prd-001\nx-st-version-path: version\nversion: 2.0.0\n---\n# PRD\n`,
       "doc/uc.md": `---\nx-st-id: uc-001\nx-st-version-path: version\nversion: 1.0.0\n---\n# UC\n`,
     });
@@ -52,7 +52,7 @@ describe("spectrack link", () => {
 
   it("既存の依存関係にマージ（重複 ID は上書き）する", async () => {
     fixture = await createGitFixture({
-      "spectrack.yml": `frontMatterKeyPrefix: x-st-\ndocumentRootPath: doc\n`,
+      "spectrack.yml": `frontMatterKeyPrefix: x-st-\n`,
       "doc/prd.md": `---\nx-st-id: prd-001\nx-st-version-path: version\nversion: 2.0.0\n---\n# PRD\n`,
       "doc/uc.md": `---\nx-st-id: uc-001\nx-st-version-path: version\nx-st-dependencies:\n  - id: prd-001\n    version: 1.0.0\nversion: 1.0.0\n---\n# UC\n`,
     });
@@ -70,7 +70,7 @@ describe("spectrack link", () => {
 
   it("依存先ファイルが存在しない場合はエラー", async () => {
     fixture = await createGitFixture({
-      "spectrack.yml": `frontMatterKeyPrefix: x-st-\ndocumentRootPath: doc\n`,
+      "spectrack.yml": `frontMatterKeyPrefix: x-st-\n`,
       "doc/uc.md": `---\nx-st-id: uc-001\n---\n# UC\n`,
     });
 
@@ -83,7 +83,7 @@ describe("spectrack link", () => {
 
   it("リンク元ファイルが存在しない場合はエラー", async () => {
     fixture = await createGitFixture({
-      "spectrack.yml": `frontMatterKeyPrefix: x-st-\ndocumentRootPath: doc\n`,
+      "spectrack.yml": `frontMatterKeyPrefix: x-st-\n`,
       "doc/prd.md": `---\nx-st-id: prd-001\nversion: 1.0.0\n---\n# PRD\n`,
     });
 
@@ -96,7 +96,7 @@ describe("spectrack link", () => {
 
   it("--dry-run では実際の書き込みを行わない", async () => {
     fixture = await createGitFixture({
-      "spectrack.yml": `frontMatterKeyPrefix: x-st-\ndocumentRootPath: doc\n`,
+      "spectrack.yml": `frontMatterKeyPrefix: x-st-\n`,
       "doc/prd.md": `---\nx-st-id: prd-001\nx-st-version-path: version\nversion: 1.0.0\n---\n# PRD\n`,
       "doc/uc.md": `---\nx-st-id: uc-001\nx-st-version-path: version\nversion: 1.0.0\n---\n# UC\n`,
     });
@@ -117,7 +117,7 @@ describe("spectrack link", () => {
 
   it("フロントマターがないファイルへの link はエラーになる", async () => {
     fixture = await createGitFixture({
-      "spectrack.yml": `frontMatterKeyPrefix: x-st-\ndocumentRootPath: doc\n`,
+      "spectrack.yml": `frontMatterKeyPrefix: x-st-\n`,
       "doc/prd.md": `---\nx-st-id: prd-001\nx-st-version-path: version\nversion: 1.0.0\n---\n# PRD\n`,
       "doc/uc.md": `# UC\n`, // フロントマターなし
     });
@@ -134,7 +134,7 @@ describe("spectrack link", () => {
 
   it("複数の依存先をカンマ区切りで指定してリンクする", async () => {
     fixture = await createGitFixture({
-      "spectrack.yml": `frontMatterKeyPrefix: x-st-\ndocumentRootPath: doc\n`,
+      "spectrack.yml": `frontMatterKeyPrefix: x-st-\n`,
       "doc/prd.md": `---\nx-st-id: prd-001\nx-st-version-path: version\nversion: 1.0.0\n---\n# PRD\n`,
       "doc/api.md": `---\nx-st-id: api-001\nx-st-version-path: version\nversion: 2.0.0\n---\n# API\n`,
       "doc/uc.md": `---\nx-st-id: uc-001\nx-st-version-path: version\nversion: 1.0.0\n---\n# UC\n`,
@@ -156,7 +156,7 @@ describe("spectrack link", () => {
 
   it("リンク後に path ヒントが書き込まれる", async () => {
     fixture = await createGitFixture({
-      "spectrack.yml": `frontMatterKeyPrefix: x-st-\ndocumentRootPath: doc\n`,
+      "spectrack.yml": `frontMatterKeyPrefix: x-st-\n`,
       "doc/prd.md": `---\nx-st-id: prd-001\nx-st-version-path: version\nversion: 1.0.0\n---\n# PRD\n`,
       "doc/uc.md": `---\nx-st-id: uc-001\nx-st-version-path: version\nversion: 1.0.0\n---\n# UC\n`,
     });
@@ -173,7 +173,7 @@ describe("spectrack link", () => {
 
   it("x-st-id がない依存先はエラー", async () => {
     fixture = await createGitFixture({
-      "spectrack.yml": `frontMatterKeyPrefix: x-st-\ndocumentRootPath: doc\n`,
+      "spectrack.yml": `frontMatterKeyPrefix: x-st-\n`,
       "doc/prd.md": `---\nversion: 1.0.0\n---\n# PRD\n`,
       "doc/uc.md": `---\nx-st-id: uc-001\n---\n# UC\n`,
     });

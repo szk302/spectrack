@@ -18,7 +18,6 @@ export const configSchema = z.object({
   frontMatterKeyPrefix: z
     .string()
     .default(DEFAULT_CONFIG.frontMatterKeyPrefix),
-  documentRootPath: z.string().default(DEFAULT_CONFIG.documentRootPath),
   frontMatterTemplate: frontMatterTemplatesSchema.transform(
     (val): FrontMatterTemplates =>
       (val as FrontMatterTemplates | undefined) ?? DEFAULT_CONFIG.frontMatterTemplate,

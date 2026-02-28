@@ -18,7 +18,7 @@ afterEach(() => {
 describe("spectrack list", () => {
   it("ドキュメントを一覧表示して EXIT_CODE=0", async () => {
     fixture = await createGitFixture({
-      "spectrack.yml": `frontMatterKeyPrefix: x-st-\ndocumentRootPath: doc\n`,
+      "spectrack.yml": `frontMatterKeyPrefix: x-st-\n`,
       "doc/prd.md": `---\nx-st-id: prd-001\nx-st-version-path: version\nversion: 1.0.0\n---\n# PRD\n`,
     });
 
@@ -30,7 +30,7 @@ describe("spectrack list", () => {
 
   it("ドキュメントが0件でも EXIT_CODE=0", async () => {
     fixture = await createGitFixture({
-      "spectrack.yml": `frontMatterKeyPrefix: x-st-\ndocumentRootPath: doc\n`,
+      "spectrack.yml": `frontMatterKeyPrefix: x-st-\n`,
     });
 
     const ctx = await initCommandContext(fixture.dir, false);
@@ -41,7 +41,7 @@ describe("spectrack list", () => {
 
   it("複数ドキュメントを一覧表示する", async () => {
     fixture = await createGitFixture({
-      "spectrack.yml": `frontMatterKeyPrefix: x-st-\ndocumentRootPath: doc\n`,
+      "spectrack.yml": `frontMatterKeyPrefix: x-st-\n`,
       "doc/prd.md": `---\nx-st-id: prd-001\nx-st-version-path: version\nversion: 1.0.0\n---\n`,
       "doc/uc.md": `---\nx-st-id: uc-001\nx-st-version-path: version\nversion: 2.0.0\n---\n`,
     });
@@ -54,7 +54,7 @@ describe("spectrack list", () => {
 
   it("未コミット変更があるドキュメントは '未コミットの変更あり' と表示される", async () => {
     fixture = await createGitFixture({
-      "spectrack.yml": `frontMatterKeyPrefix: x-st-\ndocumentRootPath: doc\n`,
+      "spectrack.yml": `frontMatterKeyPrefix: x-st-\n`,
       "doc/prd.md": `---\nx-st-id: prd-001\nx-st-version-path: version\nversion: 1.0.0\n---\n`,
     });
 
@@ -73,7 +73,7 @@ describe("spectrack list", () => {
 
   it("x-st-id がないドキュメントは '(ID未設定)' と表示される", async () => {
     fixture = await createGitFixture({
-      "spectrack.yml": `frontMatterKeyPrefix: x-st-\ndocumentRootPath: doc\n`,
+      "spectrack.yml": `frontMatterKeyPrefix: x-st-\n`,
       "doc/prd.md": `---\nx-st-version-path: version\nversion: 1.0.0\n---\n`,
     });
 

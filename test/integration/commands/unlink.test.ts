@@ -18,7 +18,7 @@ afterEach(() => {
 describe("spectrack unlink", () => {
   it("ファイルパスで依存関係を解除する", async () => {
     fixture = await createGitFixture({
-      "spectrack.yml": `frontMatterKeyPrefix: x-st-\ndocumentRootPath: doc\n`,
+      "spectrack.yml": `frontMatterKeyPrefix: x-st-\n`,
       "doc/prd.md": `---\nx-st-id: prd-001\nx-st-version-path: version\nversion: 1.0.0\n---\n# PRD\n`,
       "doc/uc.md": `---\nx-st-id: uc-001\nx-st-version-path: version\nx-st-dependencies:\n  - id: prd-001\n    version: 1.0.0\nversion: 1.0.0\n---\n# UC\n`,
     });
@@ -34,7 +34,7 @@ describe("spectrack unlink", () => {
 
   it("ID で依存関係を解除する", async () => {
     fixture = await createGitFixture({
-      "spectrack.yml": `frontMatterKeyPrefix: x-st-\ndocumentRootPath: doc\n`,
+      "spectrack.yml": `frontMatterKeyPrefix: x-st-\n`,
       "doc/uc.md": `---\nx-st-id: uc-001\nx-st-version-path: version\nx-st-dependencies:\n  - id: prd-001\n    version: 1.0.0\nversion: 1.0.0\n---\n# UC\n`,
     });
 
@@ -49,7 +49,7 @@ describe("spectrack unlink", () => {
 
   it("複数の依存関係を一括解除する", async () => {
     fixture = await createGitFixture({
-      "spectrack.yml": `frontMatterKeyPrefix: x-st-\ndocumentRootPath: doc\n`,
+      "spectrack.yml": `frontMatterKeyPrefix: x-st-\n`,
       "doc/uc.md": `---\nx-st-id: uc-001\nx-st-dependencies:\n  - id: prd-001\n    version: 1.0.0\n  - id: api-001\n    version: 2.0.0\n---\n# UC\n`,
     });
 
@@ -65,7 +65,7 @@ describe("spectrack unlink", () => {
 
   it("存在しないファイルはエラー", async () => {
     fixture = await createGitFixture({
-      "spectrack.yml": `frontMatterKeyPrefix: x-st-\ndocumentRootPath: doc\n`,
+      "spectrack.yml": `frontMatterKeyPrefix: x-st-\n`,
     });
 
     const ctx = await initCommandContext(fixture.dir, false);
@@ -77,7 +77,7 @@ describe("spectrack unlink", () => {
 
   it("--dry-run では実際の書き込みを行わない", async () => {
     fixture = await createGitFixture({
-      "spectrack.yml": `frontMatterKeyPrefix: x-st-\ndocumentRootPath: doc\n`,
+      "spectrack.yml": `frontMatterKeyPrefix: x-st-\n`,
       "doc/prd.md": `---\nx-st-id: prd-001\nx-st-version-path: version\nversion: 1.0.0\n---\n# PRD\n`,
       "doc/uc.md": `---\nx-st-id: uc-001\nx-st-version-path: version\nx-st-dependencies:\n  - id: prd-001\n    version: 1.0.0\nversion: 1.0.0\n---\n# UC\n`,
     });
@@ -98,7 +98,7 @@ describe("spectrack unlink", () => {
 
   it("該当する依存関係がない場合は成功", async () => {
     fixture = await createGitFixture({
-      "spectrack.yml": `frontMatterKeyPrefix: x-st-\ndocumentRootPath: doc\n`,
+      "spectrack.yml": `frontMatterKeyPrefix: x-st-\n`,
       "doc/uc.md": `---\nx-st-id: uc-001\nx-st-version-path: version\nversion: 1.0.0\n---\n# UC\n`,
     });
 

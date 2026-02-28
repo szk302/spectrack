@@ -26,7 +26,7 @@ afterEach(() => {
 describe("spectrack graph", () => {
   it("mermaid フォーマット（デフォルト）で EXIT_CODE=0", async () => {
     fixture = await createGitFixture({
-      "spectrack.yml": `frontMatterKeyPrefix: x-st-\ndocumentRootPath: doc\n`,
+      "spectrack.yml": `frontMatterKeyPrefix: x-st-\n`,
       "doc/prd.md": `---\nx-st-id: prd-001\nx-st-version-path: version\nversion: 1.0.0\n---\n`,
     });
 
@@ -39,7 +39,7 @@ describe("spectrack graph", () => {
 
   it("dot フォーマットで EXIT_CODE=0", async () => {
     fixture = await createGitFixture({
-      "spectrack.yml": `frontMatterKeyPrefix: x-st-\ndocumentRootPath: doc\n`,
+      "spectrack.yml": `frontMatterKeyPrefix: x-st-\n`,
       "doc/prd.md": `---\nx-st-id: prd-001\nx-st-version-path: version\nversion: 1.0.0\n---\n`,
     });
 
@@ -52,7 +52,7 @@ describe("spectrack graph", () => {
 
   it("json フォーマットで有効なJSONを出力する", async () => {
     fixture = await createGitFixture({
-      "spectrack.yml": `frontMatterKeyPrefix: x-st-\ndocumentRootPath: doc\n`,
+      "spectrack.yml": `frontMatterKeyPrefix: x-st-\n`,
       "doc/prd.md": `---\nx-st-id: prd-001\nx-st-version-path: version\nversion: 1.0.0\n---\n`,
     });
 
@@ -67,7 +67,7 @@ describe("spectrack graph", () => {
 
   it("依存関係があるドキュメントのエッジが出力される", async () => {
     fixture = await createGitFixture({
-      "spectrack.yml": `frontMatterKeyPrefix: x-st-\ndocumentRootPath: doc\n`,
+      "spectrack.yml": `frontMatterKeyPrefix: x-st-\n`,
       "doc/prd.md": `---\nx-st-id: prd-001\nx-st-version-path: version\nversion: 1.0.0\n---\n`,
       "doc/uc.md": `---\nx-st-id: uc-001\nx-st-version-path: version\nx-st-dependencies:\n  - id: prd-001\n    version: 1.0.0\nversion: 1.0.0\n---\n`,
     });
@@ -82,7 +82,7 @@ describe("spectrack graph", () => {
 
   it("ドキュメントが0件でも EXIT_CODE=0", async () => {
     fixture = await createGitFixture({
-      "spectrack.yml": `frontMatterKeyPrefix: x-st-\ndocumentRootPath: doc\n`,
+      "spectrack.yml": `frontMatterKeyPrefix: x-st-\n`,
     });
 
     const ctx = await initCommandContext(fixture.dir, false);
@@ -93,7 +93,7 @@ describe("spectrack graph", () => {
 
   it("依存関係なしのドキュメントのみの場合はエッジなし", async () => {
     fixture = await createGitFixture({
-      "spectrack.yml": `frontMatterKeyPrefix: x-st-\ndocumentRootPath: doc\n`,
+      "spectrack.yml": `frontMatterKeyPrefix: x-st-\n`,
       "doc/a.md": `---\nx-st-id: doc-a\nx-st-version-path: version\nversion: 1.0.0\n---\n`,
       "doc/b.md": `---\nx-st-id: doc-b\nx-st-version-path: version\nversion: 1.0.0\n---\n`,
     });

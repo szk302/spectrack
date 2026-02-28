@@ -1,4 +1,3 @@
-import { join, relative } from "node:path";
 import type { SimpleGit } from "simple-git";
 import type { Config } from "../types/config.js";
 import type { VersionedDocument } from "../types/document.js";
@@ -33,9 +32,8 @@ export async function initCommandContext(
   const git = await createGitClient(cwd);
   const config = loadConfig(cwd, configRequired);
 
-  const documentRootPath = join(cwd, config.documentRootPath);
   const ig = loadIgnore(cwd);
-  const filePaths = scanFiles(documentRootPath, ig, cwd);
+  const filePaths = scanFiles(cwd, ig, cwd);
 
   const docs: VersionedDocument[] = [];
   for (const filePath of filePaths) {

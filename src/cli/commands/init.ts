@@ -1,3 +1,4 @@
+import { createInterface } from "node:readline/promises";
 import { existsSync, writeFileSync } from "node:fs";
 import { join, relative } from "node:path";
 import { DEFAULT_CONFIG } from "../../types/config.js";
@@ -18,7 +19,6 @@ import { printError } from "../../output/formatter.js";
 
 const INIT_CONFIG_TEMPLATE = `# spectrack 設定ファイル
 frontMatterKeyPrefix: x-st-   # フロントマターキープレフィックス (default: x-st-)
-documentRootPath: doc         # ドキュメントルートパス (default: doc)
 
 # frontMatterTemplate:
 #   md:
@@ -32,17 +32,47 @@ documentRootPath: doc         # ドキュメントルートパス (default: doc)
 #     x-st-dependencies: []
 `;
 
+const DEFAULT_SPECTRACKIGNORE_CONTENT = `# 自動生成されたデフォルトの除外設定
+node_modules/
+.git/
+.github/
+.vscode/
+dist/
+build/
+src/
+README.md
+CHANGELOG.md
+docker-compose*.yml
+.*.yml
+.*.yaml
+`;
+
 export type InitOptions = {
   /** 初期化するファイルの絶対パス一覧（指定がなければ引数なしモード） */
   readonly files?: readonly string[];
   /** 全対象ファイルを一括初期化する */
   readonly all?: boolean;
   readonly dryRun?: boolean;
+  /** --all 時の確認プロンプトをスキップする */
+  readonly yes?: boolean;
 };
+
+async function promptConfirmation(count: number): Promise<boolean> {
+  const rl = createInterface({ input: process.stdin, output: process.stdout });
+  try {
+    const answer = await rl.question(
+      `⚠️  ${count} 個のファイルにメタデータを追加します。よろしいですか？ [y/N]: `,
+    );
+    return answer.trim().toLowerCase() === "y";
+  } finally {
+    rl.close();
+  }
+}
 
 export async function runInit(
   options: InitOptions,
   cwd: string = process.cwd(),
+  confirmFn?: (count: number) => Promise<boolean>,
 ): Promise<ExitCode> {
   // 設定ファイルの作成（--dry-run 時は書き込みをスキップ）
   const configPath = join(cwd, SPECTRACK_CONFIG_FILE);
@@ -51,9 +81,8 @@ export async function runInit(
     configWillBeCreated = true;
     if (!options.dryRun) {
       writeFileSync(configPath, INIT_CONFIG_TEMPLATE, "utf-8");
-      console.log(`⚙️  設定ファイル: ${SPECTRACK_CONFIG_FILE} を作成しました`);
       console.log(
-        `📝 テンプレート設定をコメント状態で記載しました。必要に応じて編集してください。`,
+        `⚙️  設定ファイル (${SPECTRACK_CONFIG_FILE}, ${SPECTRACKIGNORE_FILE}) を作成しました`,
       );
     } else {
       console.log(
@@ -65,7 +94,7 @@ export async function runInit(
   // .spectrackignore がない場合は作成（--dry-run 時はスキップ）
   const ignorePath = join(cwd, SPECTRACKIGNORE_FILE);
   if (!existsSync(ignorePath) && !options.dryRun) {
-    writeFileSync(ignorePath, "# spectrack ignore file\n", "utf-8");
+    writeFileSync(ignorePath, DEFAULT_SPECTRACKIGNORE_CONTENT, "utf-8");
   }
 
   // 引数なし・--all なし → 設定ファイルのみ確認して終了
@@ -82,12 +111,38 @@ export async function runInit(
   // 対象ファイルの決定
   let filePaths: readonly string[];
   if (options.files && options.files.length > 0) {
+    // ファイル指定モード: 確認プロンプトなしで処理
     filePaths = options.files;
   } else {
-    // --all: ドキュメントルート以下のすべてをスキャン
-    const documentRootPath = join(cwd, config.documentRootPath);
+    // --all モード: プロジェクトルート全体をスキャン
     const ig = loadIgnore(cwd);
-    filePaths = scanFiles(documentRootPath, ig, cwd);
+    const allPaths = scanFiles(cwd, ig, cwd);
+
+    // 初期化が必要なファイルをカウントして確認プロンプトを表示
+    const candidatesNeedingInit = allPaths.filter((fp) => {
+      if (!existsSync(fp)) return false;
+      try {
+        const parsed = parseFile(fp, cwd);
+        return !parsed.frontMatter.id;
+      } catch {
+        return false;
+      }
+    });
+
+    if (
+      candidatesNeedingInit.length > 0 &&
+      !options.dryRun &&
+      !options.yes
+    ) {
+      const confirm = confirmFn ?? promptConfirmation;
+      const confirmed = await confirm(candidatesNeedingInit.length);
+      if (!confirmed) {
+        console.log("キャンセルしました");
+        return ExitCode.SUCCESS;
+      }
+    }
+
+    filePaths = allPaths;
   }
 
   let errorCount = 0;

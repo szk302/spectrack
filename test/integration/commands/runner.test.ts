@@ -16,7 +16,7 @@ afterEach(() => {
 describe("initCommandContext", () => {
   it("パース不能ファイルがあっても初期化が成功し、有効なドキュメントのみ含む", async () => {
     fixture = await createGitFixture({
-      "spectrack.yml": `frontMatterKeyPrefix: x-st-\ndocumentRootPath: doc\n`,
+      "spectrack.yml": `frontMatterKeyPrefix: x-st-\n`,
       "doc/valid.md": `---\nx-st-id: valid-001\nx-st-version-path: version\nversion: 1.0.0\n---\n# Valid\n`,
       // 不正な YAML フロントマター（未閉の bracket）
       "doc/malformed.md": `---\nkey: [unclosed\n---\n# Malformed\n`,

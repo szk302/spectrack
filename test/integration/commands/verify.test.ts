@@ -16,7 +16,7 @@ afterEach(() => {
 describe("spectrack verify", () => {
   it("問題なければ EXIT_CODE=0", async () => {
     fixture = await createGitFixture({
-      "spectrack.yml": `frontMatterKeyPrefix: x-st-\ndocumentRootPath: doc\n`,
+      "spectrack.yml": `frontMatterKeyPrefix: x-st-\n`,
       "doc/prd.md": `---\nx-st-id: prd-001\nx-st-version-path: version\nversion: 1.0.0\n---\n`,
       "doc/uc.md": `---\nx-st-id: uc-001\nx-st-version-path: version\nx-st-dependencies:\n  - id: prd-001\n    version: 1.0.0\nversion: 1.0.0\n---\n`,
     });
@@ -28,7 +28,7 @@ describe("spectrack verify", () => {
 
   it("循環依存がある場合は EXIT_CODE=2（警告）", async () => {
     fixture = await createGitFixture({
-      "spectrack.yml": `frontMatterKeyPrefix: x-st-\ndocumentRootPath: doc\n`,
+      "spectrack.yml": `frontMatterKeyPrefix: x-st-\n`,
       "doc/a.md": `---\nx-st-id: doc-a\nx-st-version-path: version\nx-st-dependencies:\n  - id: doc-b\n    version: 1.0.0\nversion: 1.0.0\n---\n`,
       "doc/b.md": `---\nx-st-id: doc-b\nx-st-version-path: version\nx-st-dependencies:\n  - id: doc-a\n    version: 1.0.0\nversion: 1.0.0\n---\n`,
     });
@@ -40,7 +40,7 @@ describe("spectrack verify", () => {
 
   it("--allow-cycles で循環依存を許容する", async () => {
     fixture = await createGitFixture({
-      "spectrack.yml": `frontMatterKeyPrefix: x-st-\ndocumentRootPath: doc\n`,
+      "spectrack.yml": `frontMatterKeyPrefix: x-st-\n`,
       "doc/a.md": `---\nx-st-id: doc-a\nx-st-version-path: version\nx-st-dependencies:\n  - id: doc-b\n    version: 1.0.0\nversion: 1.0.0\n---\n`,
       "doc/b.md": `---\nx-st-id: doc-b\nx-st-version-path: version\nx-st-dependencies:\n  - id: doc-a\n    version: 1.0.0\nversion: 1.0.0\n---\n`,
     });
@@ -52,7 +52,7 @@ describe("spectrack verify", () => {
 
   it("存在しない依存先参照はエラー", async () => {
     fixture = await createGitFixture({
-      "spectrack.yml": `frontMatterKeyPrefix: x-st-\ndocumentRootPath: doc\n`,
+      "spectrack.yml": `frontMatterKeyPrefix: x-st-\n`,
       "doc/uc.md": `---\nx-st-id: uc-001\nx-st-version-path: version\nx-st-dependencies:\n  - id: nonexistent-id\n    version: 1.0.0\nversion: 1.0.0\n---\n`,
     });
 
@@ -63,7 +63,7 @@ describe("spectrack verify", () => {
 
   it("x-st-id がないドキュメントがある場合は EXIT_CODE=1", async () => {
     fixture = await createGitFixture({
-      "spectrack.yml": `frontMatterKeyPrefix: x-st-\ndocumentRootPath: doc\n`,
+      "spectrack.yml": `frontMatterKeyPrefix: x-st-\n`,
       "doc/prd.md": `---\nx-st-version-path: version\nversion: 1.0.0\n---\n`,
     });
 
@@ -74,7 +74,7 @@ describe("spectrack verify", () => {
 
   it("バージョン形式が不正（SemVer違反）の場合は EXIT_CODE=2", async () => {
     fixture = await createGitFixture({
-      "spectrack.yml": `frontMatterKeyPrefix: x-st-\ndocumentRootPath: doc\n`,
+      "spectrack.yml": `frontMatterKeyPrefix: x-st-\n`,
       "doc/prd.md": `---\nx-st-id: prd-001\nx-st-version-path: version\nversion: not-a-semver\n---\n`,
     });
 
@@ -85,7 +85,7 @@ describe("spectrack verify", () => {
 
   it("プレリリースに英字を含むバージョンは EXIT_CODE=1", async () => {
     fixture = await createGitFixture({
-      "spectrack.yml": `frontMatterKeyPrefix: x-st-\ndocumentRootPath: doc\n`,
+      "spectrack.yml": `frontMatterKeyPrefix: x-st-\n`,
       "doc/prd.md": `---\nx-st-id: prd-001\nx-st-version-path: version\nversion: 1.0.0-alpha\n---\n`,
     });
 
@@ -96,7 +96,7 @@ describe("spectrack verify", () => {
 
   it("ドキュメントが0件の場合は EXIT_CODE=0", async () => {
     fixture = await createGitFixture({
-      "spectrack.yml": `frontMatterKeyPrefix: x-st-\ndocumentRootPath: doc\n`,
+      "spectrack.yml": `frontMatterKeyPrefix: x-st-\n`,
     });
 
     const ctx = await initCommandContext(fixture.dir, false);
@@ -106,7 +106,7 @@ describe("spectrack verify", () => {
 
   it("依存関係なしのドキュメントのみの場合は EXIT_CODE=0", async () => {
     fixture = await createGitFixture({
-      "spectrack.yml": `frontMatterKeyPrefix: x-st-\ndocumentRootPath: doc\n`,
+      "spectrack.yml": `frontMatterKeyPrefix: x-st-\n`,
       "doc/a.md": `---\nx-st-id: doc-a\nx-st-version-path: version\nversion: 1.0.0\n---\n`,
       "doc/b.md": `---\nx-st-id: doc-b\nx-st-version-path: version\nversion: 2.0.0\n---\n`,
     });
@@ -118,7 +118,7 @@ describe("spectrack verify", () => {
 
   it("循環依存とバージョン警告が同時発生した場合は EXIT_CODE=2", async () => {
     fixture = await createGitFixture({
-      "spectrack.yml": `frontMatterKeyPrefix: x-st-\ndocumentRootPath: doc\n`,
+      "spectrack.yml": `frontMatterKeyPrefix: x-st-\n`,
       "doc/a.md": `---\nx-st-id: doc-a\nx-st-version-path: version\nx-st-dependencies:\n  - id: doc-b\n    version: 1.0.0\nversion: not-semver\n---\n`,
       "doc/b.md": `---\nx-st-id: doc-b\nx-st-version-path: version\nx-st-dependencies:\n  - id: doc-a\n    version: 1.0.0\nversion: 1.0.0\n---\n`,
     });

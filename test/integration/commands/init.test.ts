@@ -27,7 +27,7 @@ describe("spectrack init", () => {
 
   it("既存の設定ファイルがある場合はスキップ", async () => {
     fixture = await createGitFixture({
-      "spectrack.yml": `frontMatterKeyPrefix: x-st-\ndocumentRootPath: doc\n`,
+      "spectrack.yml": `frontMatterKeyPrefix: x-st-\n`,
     });
 
     const originalContent = readFileSync(
@@ -47,11 +47,11 @@ describe("spectrack init", () => {
 
   it("--all でフロントマターを一括追加する", async () => {
     fixture = await createGitFixture({
-      "spectrack.yml": `frontMatterKeyPrefix: x-st-\ndocumentRootPath: doc\n`,
+      "spectrack.yml": `frontMatterKeyPrefix: x-st-\n`,
       "doc/prd.md": `# PRD\nThis is a product requirements document.\n`,
     });
 
-    const exitCode = await runInit({ all: true }, fixture.dir);
+    const exitCode = await runInit({ all: true, yes: true }, fixture.dir);
 
     expect(exitCode).toBe(0);
     const content = readFileSync(join(fixture.dir, "doc/prd.md"), "utf-8");
@@ -60,7 +60,7 @@ describe("spectrack init", () => {
 
   it("ファイル指定でフロントマターを追加する", async () => {
     fixture = await createGitFixture({
-      "spectrack.yml": `frontMatterKeyPrefix: x-st-\ndocumentRootPath: doc\n`,
+      "spectrack.yml": `frontMatterKeyPrefix: x-st-\n`,
       "doc/prd.md": `# PRD\nThis is a product requirements document.\n`,
       "doc/api.md": `# API\nThis is an API spec.\n`,
     });
@@ -93,7 +93,7 @@ describe("spectrack init", () => {
 
   it("既に x-st-id があるファイルはスキップする", async () => {
     fixture = await createGitFixture({
-      "spectrack.yml": `frontMatterKeyPrefix: x-st-\ndocumentRootPath: doc\n`,
+      "spectrack.yml": `frontMatterKeyPrefix: x-st-\n`,
       "doc/prd.md": `---\nx-st-id: prd-001\nx-st-version-path: version\nversion: 1.0.0\n---\n# PRD\n`,
     });
 
@@ -107,7 +107,7 @@ describe("spectrack init", () => {
 
   it("--dry-run ではフロントマターを書き込まない", async () => {
     fixture = await createGitFixture({
-      "spectrack.yml": `frontMatterKeyPrefix: x-st-\ndocumentRootPath: doc\n`,
+      "spectrack.yml": `frontMatterKeyPrefix: x-st-\n`,
       "doc/prd.md": `# PRD\nThis is a product requirements document.\n`,
     });
 
@@ -124,7 +124,7 @@ describe("spectrack init", () => {
 
   it("ファイル指定で --dry-run ではフロントマターを書き込まない", async () => {
     fixture = await createGitFixture({
-      "spectrack.yml": `frontMatterKeyPrefix: x-st-\ndocumentRootPath: doc\n`,
+      "spectrack.yml": `frontMatterKeyPrefix: x-st-\n`,
       "doc/prd.md": `# PRD\nThis is a product requirements document.\n`,
     });
 
@@ -157,7 +157,7 @@ describe("spectrack init", () => {
 
   it("存在しないファイルを指定した場合はエラー", async () => {
     fixture = await createGitFixture({
-      "spectrack.yml": `frontMatterKeyPrefix: x-st-\ndocumentRootPath: doc\n`,
+      "spectrack.yml": `frontMatterKeyPrefix: x-st-\n`,
     });
 
     const filePath = join(fixture.dir, "doc/nonexistent.md");
@@ -177,5 +177,36 @@ describe("spectrack init", () => {
     } finally {
       rmSync(tmpDir, { recursive: true, force: true });
     }
+  });
+
+  it("--all で確認プロンプトを拒否するとキャンセルされる", async () => {
+    fixture = await createGitFixture({
+      "spectrack.yml": `frontMatterKeyPrefix: x-st-\n`,
+      "doc/prd.md": `# PRD\nThis is a product requirements document.\n`,
+    });
+
+    const exitCode = await runInit(
+      { all: true },
+      fixture.dir,
+      async () => false,
+    );
+
+    expect(exitCode).toBe(0);
+    // キャンセルされたのでフロントマターは追加されていない
+    const content = readFileSync(join(fixture.dir, "doc/prd.md"), "utf-8");
+    expect(content).not.toContain("x-st-id");
+  });
+
+  it("--all --yes で確認プロンプトをスキップしてフロントマターを追加する", async () => {
+    fixture = await createGitFixture({
+      "spectrack.yml": `frontMatterKeyPrefix: x-st-\n`,
+      "doc/prd.md": `# PRD\nThis is a product requirements document.\n`,
+    });
+
+    const exitCode = await runInit({ all: true, yes: true }, fixture.dir);
+
+    expect(exitCode).toBe(0);
+    const content = readFileSync(join(fixture.dir, "doc/prd.md"), "utf-8");
+    expect(content).toContain("x-st-id");
   });
 });

@@ -33,20 +33,27 @@ export function createProgram(): Command {
     .description("設定ファイルを作成し、ドキュメントを初期化する")
     .option("--all", "プロジェクト内の全ファイルにフロントマターを一括追加する")
     .option("--dry-run", "実際の書き込みを行わず変更内容を表示する")
-    .action(async (files: string[], opts: { all?: boolean; dryRun?: boolean }) => {
-      const cwd = process.cwd();
-      const code = await runInit(
-        {
-          ...(files.length > 0 && {
-            files: files.map((f) => resolve(cwd, f)),
-          }),
-          all: opts.all ?? false,
-          dryRun: opts.dryRun ?? false,
-        },
-        cwd,
-      );
-      process.exit(code);
-    });
+    .option("-y, --yes", "--all 指定時の確認プロンプトをスキップする")
+    .action(
+      async (
+        files: string[],
+        opts: { all?: boolean; dryRun?: boolean; yes?: boolean },
+      ) => {
+        const cwd = process.cwd();
+        const code = await runInit(
+          {
+            ...(files.length > 0 && {
+              files: files.map((f) => resolve(cwd, f)),
+            }),
+            all: opts.all ?? false,
+            dryRun: opts.dryRun ?? false,
+            yes: opts.yes ?? false,
+          },
+          cwd,
+        );
+        process.exit(code);
+      },
+    );
 
   // spectrack link
   program

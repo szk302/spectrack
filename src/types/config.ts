@@ -19,15 +19,12 @@ export type FrontMatterTemplates = {
 export type Config = {
   /** フロントマターキープレフィックス (default: "x-st-") */
   readonly frontMatterKeyPrefix: string;
-  /** ドキュメントルートパス (default: "doc") */
-  readonly documentRootPath: string;
   /** フロントマターテンプレート */
   readonly frontMatterTemplate: FrontMatterTemplates;
 };
 
 export const DEFAULT_CONFIG: Config = {
   frontMatterKeyPrefix: "x-st-",
-  documentRootPath: "doc",
   frontMatterTemplate: {
     md: {
       version: "0.0.0",

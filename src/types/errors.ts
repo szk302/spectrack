@@ -75,7 +75,10 @@ export class InvalidFrontMatterError extends SpectrackError {
 /** 設定ファイル不在エラー */
 export class ConfigNotFoundError extends SpectrackError {
   constructor() {
-    super(`ERROR: spectrack.yml が見つかりません`, ExitCode.ERROR);
+    super(
+      `ERROR: spectrack.yml が見つかりません。spectrack init を実行してください`,
+      ExitCode.ERROR,
+    );
     this.name = "ConfigNotFoundError";
   }
 }

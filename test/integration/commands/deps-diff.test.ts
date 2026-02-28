@@ -18,7 +18,7 @@ afterEach(() => {
 describe("spectrack deps-diff", () => {
   it("依存先が更新されている場合は差分を表示する", async () => {
     fixture = await createGitFixture({
-      "spectrack.yml": `frontMatterKeyPrefix: x-st-\ndocumentRootPath: doc\n`,
+      "spectrack.yml": `frontMatterKeyPrefix: x-st-\n`,
       "doc/prd.md": `---\nx-st-id: prd-001\nx-st-version-path: version\nversion: 1.0.0\n---\n# PRD\nOriginal content.\n`,
       "doc/uc.md": `---\nx-st-id: uc-001\nx-st-version-path: version\nx-st-dependencies:\n  - id: prd-001\n    path: doc/prd.md\n    version: 1.0.0\nversion: 1.0.0\n---\n# UC\n`,
     });
@@ -50,7 +50,7 @@ describe("spectrack deps-diff", () => {
 
   it("依存先が同じバージョンの場合はスキップする", async () => {
     fixture = await createGitFixture({
-      "spectrack.yml": `frontMatterKeyPrefix: x-st-\ndocumentRootPath: doc\n`,
+      "spectrack.yml": `frontMatterKeyPrefix: x-st-\n`,
       "doc/prd.md": `---\nx-st-id: prd-001\nx-st-version-path: version\nversion: 1.0.0\n---\n# PRD\n`,
       "doc/uc.md": `---\nx-st-id: uc-001\nx-st-version-path: version\nx-st-dependencies:\n  - id: prd-001\n    path: doc/prd.md\n    version: 1.0.0\nversion: 1.0.0\n---\n# UC\n`,
     });
@@ -64,7 +64,7 @@ describe("spectrack deps-diff", () => {
 
   it("依存関係がないドキュメントはメッセージを表示して成功する", async () => {
     fixture = await createGitFixture({
-      "spectrack.yml": `frontMatterKeyPrefix: x-st-\ndocumentRootPath: doc\n`,
+      "spectrack.yml": `frontMatterKeyPrefix: x-st-\n`,
       "doc/prd.md": `---\nx-st-id: prd-001\nx-st-version-path: version\nversion: 1.0.0\n---\n# PRD\n`,
     });
 
@@ -77,7 +77,7 @@ describe("spectrack deps-diff", () => {
 
   it("ファイルが存在しない場合はエラー", async () => {
     fixture = await createGitFixture({
-      "spectrack.yml": `frontMatterKeyPrefix: x-st-\ndocumentRootPath: doc\n`,
+      "spectrack.yml": `frontMatterKeyPrefix: x-st-\n`,
     });
 
     const ctx = await initCommandContext(fixture.dir, false);
@@ -89,7 +89,7 @@ describe("spectrack deps-diff", () => {
 
   it("x-st-id がないファイルはエラー", async () => {
     fixture = await createGitFixture({
-      "spectrack.yml": `frontMatterKeyPrefix: x-st-\ndocumentRootPath: doc\n`,
+      "spectrack.yml": `frontMatterKeyPrefix: x-st-\n`,
       "doc/prd.md": `---\nversion: 1.0.0\n---\n# PRD\n`,
     });
 
@@ -102,7 +102,7 @@ describe("spectrack deps-diff", () => {
 
   it("依存先が IDレジストリに存在しない場合はエラー", async () => {
     fixture = await createGitFixture({
-      "spectrack.yml": `frontMatterKeyPrefix: x-st-\ndocumentRootPath: doc\n`,
+      "spectrack.yml": `frontMatterKeyPrefix: x-st-\n`,
       "doc/uc.md": `---\nx-st-id: uc-001\nx-st-version-path: version\nx-st-dependencies:\n  - id: ghost-999\n    path: doc/ghost.md\n    version: 1.0.0\nversion: 1.0.0\n---\n# UC\n`,
     });
 
@@ -115,7 +115,7 @@ describe("spectrack deps-diff", () => {
 
   it("参照バージョンのコミットが見つからない場合はエラー", async () => {
     fixture = await createGitFixture({
-      "spectrack.yml": `frontMatterKeyPrefix: x-st-\ndocumentRootPath: doc\n`,
+      "spectrack.yml": `frontMatterKeyPrefix: x-st-\n`,
       "doc/prd.md": `---\nx-st-id: prd-001\nx-st-version-path: version\nversion: 1.0.0\n---\n# PRD\n`,
       // uc.md は prd.md の存在しないバージョン (9.9.9) を参照
       "doc/uc.md": `---\nx-st-id: uc-001\nx-st-version-path: version\nx-st-dependencies:\n  - id: prd-001\n    path: doc/prd.md\n    version: 9.9.9\nversion: 1.0.0\n---\n# UC\n`,
@@ -130,7 +130,7 @@ describe("spectrack deps-diff", () => {
 
   it("複数の依存先がある場合は更新ありのものだけ差分を表示する", async () => {
     fixture = await createGitFixture({
-      "spectrack.yml": `frontMatterKeyPrefix: x-st-\ndocumentRootPath: doc\n`,
+      "spectrack.yml": `frontMatterKeyPrefix: x-st-\n`,
       "doc/prd.md": `---\nx-st-id: prd-001\nx-st-version-path: version\nversion: 1.0.0\n---\n# PRD\n`,
       "doc/api.md": `---\nx-st-id: api-001\nx-st-version-path: version\nversion: 2.0.0\n---\n# API\n`,
       "doc/uc.md": `---\nx-st-id: uc-001\nx-st-version-path: version\nx-st-dependencies:\n  - id: prd-001\n    path: doc/prd.md\n    version: 1.0.0\n  - id: api-001\n    path: doc/api.md\n    version: 2.0.0\nversion: 1.0.0\n---\n# UC\n`,

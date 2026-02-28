@@ -32,11 +32,11 @@ describe("loadConfig", () => {
     try {
       writeFileSync(
         join(dir, "spectrack.yml"),
-        `frontMatterKeyPrefix: x-st-\ndocumentRootPath: specs\n`,
+        `frontMatterKeyPrefix: x-st-custom-\n`,
         "utf-8",
       );
       const config = loadConfig(dir);
-      expect(config.documentRootPath).toBe("specs");
+      expect(config.frontMatterKeyPrefix).toBe("x-st-custom-");
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
@@ -74,6 +74,5 @@ describe("parseConfig", () => {
   it("空オブジェクトはデフォルト値を使用する", () => {
     const config = parseConfig({});
     expect(config.frontMatterKeyPrefix).toBe(DEFAULT_CONFIG.frontMatterKeyPrefix);
-    expect(config.documentRootPath).toBe(DEFAULT_CONFIG.documentRootPath);
   });
 });
