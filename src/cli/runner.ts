@@ -53,11 +53,3 @@ export async function initCommandContext(
   return { config, docs, idRegistry, git, cwd };
 }
 
-/**
- * 単一ファイルをパースして VersionedDocument を返す
- */
-export function parseDocFile(filePath: string, cwd: string): VersionedDocument {
-  const parsed = parseFile(filePath, cwd);
-  const currentVersion = resolveVersion(parsed);
-  return { ...parsed, currentVersion };
-}

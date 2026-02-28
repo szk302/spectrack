@@ -72,14 +72,6 @@ export function isUpdated(
 }
 
 /**
- * バージョンを比較して新しい方を返す
- */
-export function newerVersion(a: string, b: string): string {
-  const cmp = semver.compare(a, b);
-  return cmp >= 0 ? a : b;
-}
-
-/**
  * SemVer が有効かチェックする
  */
 export function isValidSemVer(version: string): boolean {

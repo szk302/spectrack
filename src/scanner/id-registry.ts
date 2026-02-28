@@ -57,17 +57,3 @@ export function findIdByPath(
   return undefined;
 }
 
-/**
- * ファイルパスから RegistryEntry を解決する（path ヒントによる依存先解決用）
- */
-export function resolveByPath(
-  registry: IdRegistry,
-  filePath: string,
-): RegistryEntry | undefined {
-  for (const entry of registry.values()) {
-    if (entry.filePath === filePath) {
-      return entry;
-    }
-  }
-  return undefined;
-}

@@ -21,23 +21,9 @@ export function printSeparator(): void {
 }
 
 /**
- * 成功メッセージを出力する
- */
-export function printSuccess(message: string): void {
-  console.log(`✅ ${message}`);
-}
-
-/**
  * エラーメッセージを stderr に出力する
  */
 export function printError(message: string): void {
-  console.error(message);
-}
-
-/**
- * 警告メッセージを stderr に出力する
- */
-export function printWarning(message: string): void {
   console.error(message);
 }
 

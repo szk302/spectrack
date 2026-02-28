@@ -111,39 +111,3 @@ export async function getVersionHistory(
   return history;
 }
 
-/**
- * HEAD コミット時点のファイルのバージョンを取得する
- */
-export async function getCommittedVersion(
-  git: SimpleGit,
-  relativePath: string,
-  versionPath: string,
-): Promise<{ version: string | null; commitHash: string | null }> {
-  try {
-    const content = await git.show([`HEAD:${relativePath}`]);
-
-    // .md ファイルの場合はフロントマター部分のみ抽出
-    let yamlContent = content;
-    if (relativePath.endsWith(".md")) {
-      const match = /^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/.exec(content);
-      yamlContent = match ? (match[1] ?? "") : "";
-    }
-
-    const yamlDoc = parseDocument(yamlContent);
-
-    if (yamlDoc.errors.length > 0) {
-      return { version: null, commitHash: null };
-    }
-
-    const raw = (yamlDoc.toJSON() ?? {}) as Record<string, unknown>;
-    const version = resolveVersionFromRaw(raw, versionPath);
-
-    // HEAD のコミットハッシュを取得
-    const log = await git.log({ file: relativePath, maxCount: 1 });
-    const commitHash = log.latest?.hash?.slice(0, 7) ?? null;
-
-    return { version, commitHash };
-  } catch {
-    return { version: null, commitHash: null };
-  }
-}

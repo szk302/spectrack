@@ -53,25 +53,6 @@ export async function getLatestCommitHash(
 }
 
 /**
- * 指定コミット時点のファイル内容を取得する
- * @param git - SimpleGit インスタンス
- * @param commitHash - コミットハッシュ (HEAD 等も可)
- * @param relativePath - リポジトリルートからの相対パス
- */
-export async function getFileAtCommit(
-  git: SimpleGit,
-  commitHash: string,
-  relativePath: string,
-): Promise<string | null> {
-  try {
-    const content = await git.show([`${commitHash}:${relativePath}`]);
-    return content;
-  } catch {
-    return null;
-  }
-}
-
-/**
  * git log -S でIDを含む過去のファイルパスを推定する
  * 削除されたファイルの追跡に使用
  */
@@ -116,23 +97,3 @@ export async function isFileModifiedInWorkingTree(
   }
 }
 
-/**
- * HEAD の直前コミットハッシュを取得する
- */
-export async function getPreviousCommitHash(
-  git: SimpleGit,
-  filePath: string,
-): Promise<string | null> {
-  try {
-    const log = await git.log({
-      file: filePath,
-      maxCount: 2,
-      format: { hash: "%H" },
-    });
-    const all = log.all;
-    if (all.length < 2) return null;
-    return all[1]?.hash?.slice(0, 7) ?? null;
-  } catch {
-    return null;
-  }
-}

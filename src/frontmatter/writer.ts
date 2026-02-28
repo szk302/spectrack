@@ -63,19 +63,6 @@ export function updateFrontMatter(
 }
 
 /**
- * ParsedDocument をファイルに書き込む（dry-run 対応）
- * dryRun が true の場合は何もしない
- */
-export function writeDocumentOrDryRun(
-  doc: ParsedDocument,
-  dryRun: boolean,
-): void {
-  if (!dryRun) {
-    writeDocument(doc);
-  }
-}
-
-/**
  * ParsedDocument をファイルに書き込む
  * コメント・インデントなどの既存フォーマットを保持する
  */

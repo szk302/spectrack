@@ -19,11 +19,3 @@ export function loadIgnore(cwd: string = process.cwd()): Ignore {
   return ig;
 }
 
-/**
- * 指定パスが無視対象かチェックする
- * @param ig - ignore インスタンス
- * @param relativePath - cwd からの相対パス
- */
-export function isIgnored(ig: Ignore, relativePath: string): boolean {
-  return ig.ignores(relativePath);
-}
