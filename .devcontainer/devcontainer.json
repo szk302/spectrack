@@ -1,7 +1,7 @@
 {
-  "name": "spectrack3",
+  "name": "spectrack",
   "dockerComposeFile": "./docker-compose.yml",
-  "service": "spectrack3",
+  "service": "spectrack",
   "workspaceFolder": "/home/dev/work",
   "remoteUser": "dev",
   "customizations": {
@@ -42,7 +42,6 @@
         "MS-CEINTL.vscode-language-pack-ja",
         "vscode-icons-team.vscode-icons",
         "esbenp.prettier-vscode",
-        "VisualStudioExptTeam.vscodeintellicode",
         "ritwickdey.LiveServer",
         "humao.rest-client",
         "alefragnani.Bookmarks",
