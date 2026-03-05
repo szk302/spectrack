@@ -1,4 +1,4 @@
-FROM debian:12.11-slim
+FROM --platform=linux/amd64 debian:12.11-slim
 
 ARG TZ=Asia/Tokyo
 ARG UID=1000

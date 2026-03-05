@@ -7,6 +7,7 @@ services:
         UID: ${UID:-1000}
         GID: ${GID:-1000}
         USER_NAME: ${USER_NAME:-dev}
+    platform: ${PLATFORM:-linux/amd64}
     environment:
       NODE_OPTIONS: "--max-old-space-size=4096"
       POWERLEVEL9K_DISABLE_GITSTATUS: "true"
