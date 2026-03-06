@@ -11,18 +11,25 @@ import {
 import { DiffTargetNotFoundError } from "../../types/errors.js";
 import type { CommandContext } from "../runner.js";
 
+export type DepsDiffOptions = {
+  readonly full?: boolean;
+  readonly context?: number;
+};
+
 /**
- * `spectrack deps-diff <file>`
+ * `spectrack deps-diff <file> [--full | --context=<lines>]`
  *
  * 対象ドキュメントが依存しているすべてのドキュメントの差分を表示する。
  * - フロントマター内の「参照バージョン」になった時点のコミットを特定し、
  *   Working Tree との diff を出力する。
  * - 参照バージョンと現在バージョンが同じ場合はスキップする。
+ * - `--full` でファイル全体のコンテキストを表示、`--context=<lines>` で前後行数を制御する。
  *
  * このコマンドは Git 履歴を参照するため、Working Tree ファーストの例外に該当する。
  */
 export async function runDepsDiff(
   filePath: string,
+  options: DepsDiffOptions,
   ctx: CommandContext,
 ): Promise<ExitCode> {
   if (!existsSync(filePath)) {
@@ -122,8 +129,10 @@ export async function runDepsDiff(
     );
     console.log(SEPARATOR);
 
+    const unifiedLines = options.full ? 99999 : (options.context ?? 3);
     try {
       const diffOutput = await ctx.git.diff([
+        `-U${unifiedLines}`,
         targetCommit.hash,
         "--",
         entry.relativePath,

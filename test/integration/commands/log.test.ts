@@ -1,4 +1,4 @@
-import { describe, it, expect, afterEach } from "vitest";
+import { describe, it, expect, afterEach, vi } from "vitest";
 import { join } from "node:path";
 import {
   createGitFixture,
@@ -28,22 +28,33 @@ describe("spectrack log", () => {
     expect(exitCode).toBe(1);
   });
 
-  it("バージョン履歴が表示される（複数コミット）", async () => {
+  it("バージョン履歴がタイムライン形式で表示される（複数コミット）", async () => {
     fixture = await createGitFixture({
       "spectrack.yml": `frontMatterKeyPrefix: x-st-\n`,
       "doc/prd.md": `---\nx-st-id: prd-001\nx-st-version-path: version\nversion: 1.0.0\n---\n# PRD\n`,
     });
 
-    // バージョンを更新して2回目のコミット
     await addAndCommit(fixture, {
       "doc/prd.md": `---\nx-st-id: prd-001\nx-st-version-path: version\nversion: 2.0.0\n---\n# PRD updated\n`,
     });
 
-    const ctx = await initCommandContext(fixture.dir, false);
-    const filePath = join(fixture.dir, "doc/prd.md");
-    const exitCode = await runLog(filePath, {}, ctx);
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    try {
+      const ctx = await initCommandContext(fixture.dir, false);
+      const filePath = join(fixture.dir, "doc/prd.md");
+      const exitCode = await runLog(filePath, {}, ctx);
 
-    expect(exitCode).toBe(0);
+      expect(exitCode).toBe(0);
+
+      const output = logSpy.mock.calls.map((c) => String(c[0])).join("\n");
+      // 最新バージョン: ✨、旧バージョン: 📝
+      expect(output).toContain("✨");
+      expect(output).toContain("📝");
+      expect(output).toContain("2.0.0");
+      expect(output).toContain("1.0.0");
+    } finally {
+      logSpy.mockRestore();
+    }
   });
 
   it("バージョン変更がない場合は '履歴が見つかりません' で EXIT_CODE=0", async () => {
@@ -60,34 +71,29 @@ describe("spectrack log", () => {
     expect(exitCode).toBe(0);
   });
 
-  it("--diff モード: 存在するバージョンとの差分を表示して EXIT_CODE=0", async () => {
-    fixture = await createGitFixture({
-      "spectrack.yml": `frontMatterKeyPrefix: x-st-\n`,
-      "doc/prd.md": `---\nx-st-id: prd-001\nx-st-version-path: version\nversion: 1.0.0\n---\n# PRD v1\n`,
-    });
-
-    await addAndCommit(fixture, {
-      "doc/prd.md": `---\nx-st-id: prd-001\nx-st-version-path: version\nversion: 2.0.0\n---\n# PRD v2\n`,
-    });
-
-    const ctx = await initCommandContext(fixture.dir, false);
-    const filePath = join(fixture.dir, "doc/prd.md");
-    const exitCode = await runLog(filePath, { diff: "1.0.0" }, ctx);
-
-    expect(exitCode).toBe(0);
-  });
-
-  it("--diff モード: 存在しないバージョンを指定すると EXIT_CODE=1", async () => {
+  it("ヘッダーにファイルパスが含まれる", async () => {
     fixture = await createGitFixture({
       "spectrack.yml": `frontMatterKeyPrefix: x-st-\n`,
       "doc/prd.md": `---\nx-st-id: prd-001\nx-st-version-path: version\nversion: 1.0.0\n---\n`,
     });
 
-    const ctx = await initCommandContext(fixture.dir, false);
-    const filePath = join(fixture.dir, "doc/prd.md");
-    const exitCode = await runLog(filePath, { diff: "9.9.9" }, ctx);
+    await addAndCommit(fixture, {
+      "doc/prd.md": `---\nx-st-id: prd-001\nx-st-version-path: version\nversion: 2.0.0\n---\n`,
+    });
 
-    expect(exitCode).toBe(1);
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    try {
+      const ctx = await initCommandContext(fixture.dir, false);
+      const filePath = join(fixture.dir, "doc/prd.md");
+      await runLog(filePath, {}, ctx);
+
+      const output = logSpy.mock.calls.map((c) => String(c[0])).join("\n");
+      // ヘッダー行にファイルパスが含まれる
+      expect(output).toContain("doc/prd.md");
+      expect(output).toContain("🕒");
+    } finally {
+      logSpy.mockRestore();
+    }
   });
 
   it("ネストされたバージョンパス（info.version）のログを表示する", async () => {

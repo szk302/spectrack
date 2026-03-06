@@ -9,6 +9,7 @@ import { runGraph } from "./commands/graph.js";
 // v2/v3 commands
 import { runLink } from "./commands/link.js";
 import { runDepsDiff } from "./commands/deps-diff.js";
+import { runDiff } from "./commands/diff.js";
 import { runUnlink } from "./commands/unlink.js";
 import { runBump } from "./commands/bump.js";
 import { runSync } from "./commands/sync.js";
@@ -181,14 +182,36 @@ export function createProgram(): Command {
       process.exit(code);
     });
 
+  // spectrack diff
+  program
+    .command("diff <file>")
+    .description("指定ドキュメント自身の過去バージョンとの差分を表示する")
+    .option("--version <version>", "比較する過去バージョン（省略時は直前バージョンを自動取得）")
+    .option("--full", "ファイル全体のコンテキストを表示する")
+    .option("--context <lines>", "差分前後に表示するコンテキスト行数", (v) => parseInt(v, 10))
+    .action(
+      async (
+        file: string,
+        opts: { version?: string; full?: boolean; context?: number },
+      ) => {
+        const filePath = resolve(process.cwd(), file);
+        const code = await withContext(true, async (ctx) =>
+          runDiff(filePath, opts, ctx),
+        );
+        process.exit(code);
+      },
+    );
+
   // spectrack deps-diff
   program
     .command("deps-diff <file>")
     .description("依存先ドキュメントの参照バージョンからの差分を表示する")
-    .action(async (file: string) => {
+    .option("--full", "ファイル全体のコンテキストを表示する")
+    .option("--context <lines>", "差分前後に表示するコンテキスト行数", (v) => parseInt(v, 10))
+    .action(async (file: string, opts: { full?: boolean; context?: number }) => {
       const filePath = resolve(process.cwd(), file);
       const code = await withContext(true, async (ctx) =>
-        runDepsDiff(filePath, ctx),
+        runDepsDiff(filePath, opts, ctx),
       );
       process.exit(code);
     });
@@ -196,16 +219,11 @@ export function createProgram(): Command {
   // spectrack log
   program
     .command("log <file>")
-    .description("ドキュメントのバージョン変更履歴を表示する")
-    .option("--diff <version>", "指定バージョンとの差分を表示する")
-    .action(async (file: string, opts: { diff?: string }) => {
+    .description("ドキュメントのバージョン変更履歴をタイムライン形式で表示する")
+    .action(async (file: string) => {
       const filePath = resolve(process.cwd(), file);
       const code = await withContext(true, async (ctx) =>
-        runLog(
-          filePath,
-          { ...(opts.diff !== undefined && { diff: opts.diff }) },
-          ctx,
-        ),
+        runLog(filePath, {}, ctx),
       );
       process.exit(code);
     });
