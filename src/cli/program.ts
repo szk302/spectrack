@@ -2,7 +2,7 @@ import { Command } from "commander";
 import { resolve } from "node:path";
 import { ExitCode } from "../output/exit-code.js";
 import { printError } from "../output/formatter.js";
-import { initCommandContext } from "./runner.js";
+import { initCommandContext, initListContext } from "./runner.js";
 import { runInit } from "./commands/init.js";
 import { runVerify } from "./commands/verify.js";
 import { runGraph } from "./commands/graph.js";
@@ -166,8 +166,14 @@ export function createProgram(): Command {
     .command("list")
     .description("全追跡対象ドキュメントのインベントリを表示する")
     .action(async () => {
-      const code = await withContext(true, async (ctx) => runList(ctx));
-      process.exit(code);
+      try {
+        const ctx = await initListContext(process.cwd());
+        const code = await runList(ctx);
+        process.exit(code);
+      } catch (err) {
+        printError(err instanceof Error ? err.message : String(err));
+        process.exit(1);
+      }
     });
 
   // spectrack dependents

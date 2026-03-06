@@ -6,6 +6,18 @@ import {
 
 /**
  * Git クライアントを初期化して返す
+ * リポジトリが初期化されていない場合は null を返す（エラーを投げない）
+ */
+export async function createGitClientOptional(cwd: string): Promise<SimpleGit | null> {
+  try {
+    return await createGitClient(cwd);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Git クライアントを初期化して返す
  * リポジトリが初期化されていない場合はエラーを投げる
  */
 export async function createGitClient(cwd: string): Promise<SimpleGit> {
