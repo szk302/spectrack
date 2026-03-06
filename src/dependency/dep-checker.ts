@@ -12,6 +12,7 @@ import {
 import { detectUpdate, type UpdateStatus } from "../version/update-detector.js";
 import { DependencyNotFoundError, InvalidFrontMatterError } from "../types/errors.js";
 import { estimateDeletedFilePath } from "../git/file-tracker.js";
+import { isValidSemVer } from "../version/semver-utils.js";
 
 export type DepCheckResult = {
   /** 依存元ドキュメント */
@@ -20,6 +21,8 @@ export type DepCheckResult = {
   readonly statuses: readonly UpdateStatus[];
   /** エラーがあった依存先 */
   readonly errors: readonly { id: string; error: Error }[];
+  /** 無効な SemVer を持つ依存先への警告 */
+  readonly semverWarnings: readonly { id: string; file: string; version: string }[];
 };
 
 /**
@@ -46,6 +49,7 @@ export async function checkDocDeps(
 ): Promise<DepCheckResult> {
   const statuses: UpdateStatus[] = [];
   const errors: { id: string; error: Error }[] = [];
+  const semverWarnings: { id: string; file: string; version: string }[] = [];
 
   for (const dep of doc.frontMatter.dependencies) {
     const entry = resolveId(registry, dep.id);
@@ -80,6 +84,20 @@ export async function checkDocDeps(
 
     const currentVersion = resolveVersion(depDoc);
 
+    // バージョン情報が取得できない場合はエラー (F6-1)
+    if (currentVersion === null) {
+      errors.push({
+        id: dep.id,
+        error: new Error(`依存先 [${dep.id}] のバージョン情報が見つかりません`),
+      });
+      continue;
+    }
+
+    // 無効な SemVer の場合は警告 (V3-3)
+    if (!isValidSemVer(currentVersion)) {
+      semverWarnings.push({ id: dep.id, file: entry.relativePath, version: currentVersion });
+    }
+
     // 未コミットの変更があるか確認
     const isWorkTree = await isFileModifiedInWorkingTree(git, entry.relativePath);
 
@@ -91,5 +109,5 @@ export async function checkDocDeps(
     statuses.push(detectUpdate(dep, currentVersion, commitHash, isWorkTree, strict));
   }
 
-  return { doc, statuses, errors };
+  return { doc, statuses, errors, semverWarnings };
 }

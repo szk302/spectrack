@@ -122,6 +122,15 @@ export async function runStatus(
       }
     }
 
+    for (const warn of result.semverWarnings) {
+      console.log(
+        `WARNING: [${warn.file}] のバージョン [${warn.version}] は有効なセマンティックバージョンではありません`,
+      );
+      if (exitCode === ExitCode.SUCCESS) {
+        exitCode = ExitCode.WARNING;
+      }
+    }
+
     for (let i = 0; i < result.errors.length; i++) {
       const { id, error } = result.errors[i]!;
       const isLast = i === result.errors.length - 1;
