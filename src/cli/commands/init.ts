@@ -1,18 +1,20 @@
 import { createInterface } from "node:readline/promises";
-import { existsSync, writeFileSync } from "node:fs";
-import { join, relative } from "node:path";
+import { existsSync, writeFileSync, readFileSync } from "node:fs";
+import { join, relative, basename } from "node:path";
 import { DEFAULT_CONFIG } from "../../types/config.js";
+import type { ParsedDocument } from "../../types/document.js";
 import { ExitCode } from "../../output/exit-code.js";
 import { loadConfig, configExists } from "../../config/loader.js";
 import { loadIgnore } from "../../scanner/ignore-parser.js";
 import { scanFiles } from "../../scanner/file-scanner.js";
 import { parseFile } from "../../frontmatter/parser.js";
-import { writeDocument, addFrontMatter } from "../../frontmatter/writer.js";
+import { writeDocument, addFrontMatter, updateFrontMatter } from "../../frontmatter/writer.js";
 import { buildContext } from "../../context/context-builder.js";
 import { expandTemplate } from "../../frontmatter/template-engine.js";
 import {
   SPECTRACK_CONFIG_FILE,
   SPECTRACKIGNORE_FILE,
+  TARGET_EXTENSIONS,
 } from "../../config/defaults.js";
 import type { TargetExtension } from "../../config/defaults.js";
 import { printError } from "../../output/formatter.js";
@@ -74,6 +76,18 @@ export async function runInit(
   cwd: string = process.cwd(),
   confirmFn?: (count: number) => Promise<boolean>,
 ): Promise<ExitCode> {
+  // C-1: <file> 指定と --all の競合チェック
+  if (options.files && options.files.length > 0 && options.all) {
+    printError("ERROR: <file> 指定と --all は同時に使用できません");
+    return ExitCode.ERROR;
+  }
+
+  // 4-2: --yes は --all 指定時のみ有効
+  if (options.yes && !options.all) {
+    printError("ERROR: --yes は --all と組み合わせて使用する必要があります");
+    return ExitCode.ERROR;
+  }
+
   // 設定ファイルの作成（--dry-run 時は書き込みをスキップ）
   const configPath = join(cwd, SPECTRACK_CONFIG_FILE);
   let configWillBeCreated = false;
@@ -157,6 +171,26 @@ export async function runInit(
       continue;
     }
 
+    // 2-7: 対象外拡張子のチェック
+    const fileExt = basename(filePath).split(".").pop()?.toLowerCase() ?? "";
+    if (!(TARGET_EXTENSIONS as readonly string[]).includes(fileExt)) {
+      printError(
+        `❌ ${relative(cwd, filePath)}: 対象外の拡張子です`,
+      );
+      errorCount++;
+      continue;
+    }
+
+    // 2-8: バイナリファイルのチェック（先頭 8KB にヌルバイトがあればバイナリと判定）
+    const rawBuf = readFileSync(filePath);
+    if (rawBuf.subarray(0, 8192).indexOf(0) !== -1) {
+      printError(
+        `❌ ${relative(cwd, filePath)}: バイナリファイルは対象外です`,
+      );
+      errorCount++;
+      continue;
+    }
+
     try {
       const parsed = parseFile(filePath, cwd);
 
@@ -184,7 +218,19 @@ export async function runInit(
           typeof value === "string" ? expandTemplate(value, ctx) : value;
       }
 
-      const updated = addFrontMatter(parsed, initialFields);
+      // 2-5: 既存フロントマターがある場合は x-st-* キーのみ追記して既存内容を保護
+      const hasExistingFrontMatter = Object.keys(parsed.frontMatter.raw).length > 0;
+      let updated: ParsedDocument;
+      if (hasExistingFrontMatter) {
+        const prefix = config.frontMatterKeyPrefix;
+        const stFields = Object.fromEntries(
+          Object.entries(initialFields).filter(([k]) => k.startsWith(prefix)),
+        );
+        updated = updateFrontMatter(parsed, stFields);
+      } else {
+        updated = addFrontMatter(parsed, initialFields);
+      }
+
       if (!options.dryRun) {
         writeDocument(updated);
       }
