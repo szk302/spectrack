@@ -1,4 +1,4 @@
-import { readdirSync, statSync } from "node:fs";
+import { readdirSync, lstatSync } from "node:fs";
 import { join, relative } from "node:path";
 import type { Ignore } from "ignore";
 import type { TargetExtension } from "../config/defaults.js";
@@ -44,7 +44,7 @@ function scanDir(
 
     let stat;
     try {
-      stat = statSync(fullPath);
+      stat = lstatSync(fullPath);
     } catch {
       continue;
     }

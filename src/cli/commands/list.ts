@@ -21,6 +21,11 @@ export async function runList(ctx: ListCommandContext): Promise<ExitCode> {
   console.log(SEPARATOR);
   console.log(`📦 ドキュメント一覧 (全 ${docs.length} ファイル)\n`);
 
+  if (docs.length === 0) {
+    console.log("追跡対象のドキュメントがありません");
+    return ExitCode.SUCCESS;
+  }
+
   for (const doc of docs) {
     const relPath = relative(ctx.cwd, doc.filePath);
     const id = doc.frontMatter.id ?? "(ID未設定)";
