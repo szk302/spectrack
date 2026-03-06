@@ -108,4 +108,39 @@ describe("spectrack unlink", () => {
 
     expect(exitCode).toBe(0);
   });
+
+  // M1-5: unlink 時の x-st-dependencies 欠損（null / キーなし）
+  it("x-st-dependencies が存在しない場合でも安全に成功する", async () => {
+    fixture = await createGitFixture({
+      "spectrack.yml": `frontMatterKeyPrefix: x-st-\n`,
+      "doc/uc.md": `---\nx-st-id: uc-001\nx-st-version-path: version\nversion: 1.0.0\n---\n# UC\n`, // x-st-dependencies キーなし
+    });
+
+    const ctx = await initCommandContext(fixture.dir, false);
+    const filePath = join(fixture.dir, "doc/uc.md");
+    const originalContent = readFileSync(filePath, "utf-8");
+    const exitCode = await runUnlink(filePath, { deps: "prd-001" }, ctx);
+
+    expect(exitCode).toBe(0);
+    // ファイルは変更されていない
+    expect(readFileSync(filePath, "utf-8")).toBe(originalContent);
+  });
+
+  // F1-5: unlink 時の対象外拡張子の依存先指定
+  it("対象外拡張子のファイルを依存解除対象に指定するとエラーになる", async () => {
+    fixture = await createGitFixture({
+      "spectrack.yml": `frontMatterKeyPrefix: x-st-\n`,
+      "logo.png": `fake binary content`,
+      "doc/uc.md": `---\nx-st-id: uc-001\nx-st-version-path: version\nx-st-dependencies:\n  - id: prd-001\n    version: 1.0.0\nversion: 1.0.0\n---\n# UC\n`,
+    });
+
+    const ctx = await initCommandContext(fixture.dir, false);
+    const filePath = join(fixture.dir, "doc/uc.md");
+    const originalContent = readFileSync(filePath, "utf-8");
+    const exitCode = await runUnlink(filePath, { deps: "logo.png" }, ctx);
+
+    expect(exitCode).toBe(1);
+    // 対象ファイルは変更されていない
+    expect(readFileSync(filePath, "utf-8")).toBe(originalContent);
+  });
 });

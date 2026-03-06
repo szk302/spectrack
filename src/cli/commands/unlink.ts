@@ -4,7 +4,15 @@ import { ExitCode } from "../../output/exit-code.js";
 import { printError, printTreeItems } from "../../output/formatter.js";
 import { parseFile } from "../../frontmatter/parser.js";
 import { updateFrontMatter, writeDocument } from "../../frontmatter/writer.js";
+import { TARGET_EXTENSIONS } from "../../config/defaults.js";
 import type { CommandContext } from "../runner.js";
+
+function isSupportedExt(filePath: string): boolean {
+  const dot = filePath.lastIndexOf(".");
+  if (dot === -1) return false;
+  const ext = filePath.slice(dot + 1).toLowerCase();
+  return (TARGET_EXTENSIONS as readonly string[]).includes(ext);
+}
 
 export type UnlinkOptions = {
   readonly deps: string;
@@ -40,6 +48,14 @@ export async function runUnlink(
   for (const spec of depSpecs) {
     const absPath = resolve(ctx.cwd, spec);
     if (existsSync(absPath)) {
+      // 依存先ファイルの拡張子チェック
+      if (!isSupportedExt(spec)) {
+        printError(
+          `ERROR: [${spec}] はサポートされていない形式です（対応: md, yml, yaml）`,
+        );
+        return ExitCode.ERROR;
+      }
+
       // ファイルパスの場合 → ID を取得
       try {
         const depDoc = parseFile(absPath, ctx.cwd);
