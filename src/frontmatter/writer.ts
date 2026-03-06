@@ -1,6 +1,7 @@
 import { writeFileSync } from "node:fs";
-import { parseDocument, stringify } from "yaml";
-import type { ParsedDocument } from "../types/document.js";
+import { parseDocument, stringify, isSeq, isMap, isScalar } from "yaml";
+import type { Scalar } from "yaml";
+import type { Dependency, ParsedDocument } from "../types/document.js";
 import { insertFrontMatter, joinFrontMatter } from "./md-handler.js";
 
 /**
@@ -89,6 +90,70 @@ export function serializeDocument(doc: ParsedDocument): string {
     // .yml/.yaml はファイル全体が YAML
     return frontMatterStr;
   }
+}
+
+/**
+ * 依存リストを AST の in-place 更新で書き換える
+ * version・path の Scalar 値だけを書き換えることでインラインコメントを保持する
+ */
+export function updateDependenciesAST(
+  doc: ParsedDocument,
+  updatedDeps: Dependency[],
+): ParsedDocument {
+  const clonedDoc = doc.yamlDoc.clone();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const seq = clonedDoc.get("x-st-dependencies") as any;
+
+  if (!isSeq(seq)) {
+    return updateFrontMatter(doc, { "x-st-dependencies": updatedDeps });
+  }
+
+  for (const item of seq.items) {
+    if (!isMap(item)) continue;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const id = item.get("id") as any;
+    if (typeof id !== "string") continue;
+
+    const newDep = updatedDeps.find((d) => d.id === id);
+    if (!newDep) continue;
+
+    // version を in-place で更新（インラインコメントを保持）
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const versionPair = (item.items as any[]).find(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (p: any) => isScalar(p.key) && (p.key as Scalar).value === "version",
+    );
+    if (versionPair && isScalar(versionPair.value)) {
+      (versionPair.value as Scalar).value = newDep.version;
+    } else {
+      item.set("version", newDep.version);
+    }
+
+    // path を in-place で更新または追加
+    if (newDep.path) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const pathPair = (item.items as any[]).find(
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (p: any) => isScalar(p.key) && (p.key as Scalar).value === "path",
+      );
+      if (pathPair && isScalar(pathPair.value)) {
+        (pathPair.value as Scalar).value = newDep.path;
+      } else {
+        item.set("path", newDep.path);
+      }
+    }
+  }
+
+  const updatedRaw = (clonedDoc.toJSON() ?? {}) as Record<string, unknown>;
+  return {
+    ...doc,
+    frontMatter: {
+      ...doc.frontMatter,
+      dependencies: updatedDeps,
+      raw: updatedRaw,
+    },
+    yamlDoc: clonedDoc,
+  };
 }
 
 /**
