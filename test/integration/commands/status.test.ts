@@ -1,9 +1,10 @@
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { join } from "node:path";
-import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
+import { mkdtempSync, writeFileSync, rmSync, unlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
 import {
   createGitFixture,
+  addAndCommit,
   type GitFixture,
 } from "../../helpers/git-fixture.js";
 import { initCommandContext } from "../../../src/cli/runner.js";
@@ -323,6 +324,136 @@ describe("spectrack status", () => {
       "doc/prd.md": `---\nx-st-id: ""\nx-st-version-path: version\nversion: 1.0.0\n---\n# PRD\n`,
       "doc/uc.md": `---\nx-st-id: uc-001\nx-st-version-path: version\nx-st-dependencies:\n  - id: ""\n    version: 1.0.0\nversion: 1.0.0\n---\n# UC\n`,
     });
+
+    const ctx = await initCommandContext(fixture.dir, false);
+    const exitCode = await runStatus(undefined, {}, ctx);
+
+    expect(exitCode).toBe(1);
+  });
+
+  // ── S1-1: 単一ファイル指定で ✅ と現在バージョンが出力される ──
+  it("S1-1: 単一ファイル指定時に ✅ とバージョンが出力に含まれる", async () => {
+    fixture = await createGitFixture({
+      "spectrack.yml": `frontMatterKeyPrefix: x-st-\n`,
+      "doc/prd.md": `---\nx-st-id: prd-001\nx-st-version-path: version\nversion: 1.0.0\n---\n# PRD\n`,
+      "doc/uc.md": `---\nx-st-id: uc-001\nx-st-version-path: version\nx-st-dependencies:\n  - id: prd-001\n    version: 1.0.0\nversion: 1.0.0\n---\n# UC\n`,
+    });
+
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    try {
+      const ctx = await initCommandContext(fixture.dir, false);
+      const filePath = join(fixture.dir, "doc/uc.md");
+      const exitCode = await runStatus(filePath, {}, ctx);
+
+      expect(exitCode).toBe(0);
+      const output = logSpy.mock.calls.map((c) => String(c[0])).join("\n");
+      expect(output).toContain("✅");
+      expect(output).toContain("1.0.0");
+    } finally {
+      logSpy.mockRestore();
+    }
+  });
+
+  // ── S1-2: プロジェクト全体スキャン時に全ファイルが出力される ──
+  it("S1-2: 引数なしで全対象ドキュメントの依存状況が出力される", async () => {
+    fixture = await createGitFixture({
+      "spectrack.yml": `frontMatterKeyPrefix: x-st-\n`,
+      "doc/prd.md": `---\nx-st-id: prd-001\nx-st-version-path: version\nversion: 1.0.0\n---\n# PRD\n`,
+      "doc/api.md": `---\nx-st-id: api-001\nx-st-version-path: version\nversion: 1.0.0\n---\n# API\n`,
+      "doc/uc.md": `---\nx-st-id: uc-001\nx-st-version-path: version\nx-st-dependencies:\n  - id: prd-001\n    version: 1.0.0\n  - id: api-001\n    version: 1.0.0\nversion: 1.0.0\n---\n# UC\n`,
+    });
+
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    try {
+      const ctx = await initCommandContext(fixture.dir, false);
+      const exitCode = await runStatus(undefined, {}, ctx);
+
+      expect(exitCode).toBe(0);
+      const output = logSpy.mock.calls.map((c) => String(c[0])).join("\n");
+      // 全依存先の ID が出力に含まれること
+      expect(output).toContain("prd-001");
+      expect(output).toContain("api-001");
+      expect(output).toContain("✅");
+    } finally {
+      logSpy.mockRestore();
+    }
+  });
+
+  // ── U2-1: メジャー更新時に ⚠️ 相当の警告が出力される ─────────
+  it("U2-1: メジャーバージョン更新（1.0.0→2.0.0）時に更新警告が出力される", async () => {
+    fixture = await createGitFixture({
+      "spectrack.yml": `frontMatterKeyPrefix: x-st-\n`,
+      "doc/prd.md": `---\nx-st-id: prd-001\nx-st-version-path: version\nversion: 2.0.0\n---\n# PRD\n`,
+      "doc/uc.md": `---\nx-st-id: uc-001\nx-st-version-path: version\nx-st-dependencies:\n  - id: prd-001\n    version: 1.0.0\nversion: 1.0.0\n---\n# UC\n`,
+    });
+
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    try {
+      const ctx = await initCommandContext(fixture.dir, false);
+      const exitCode = await runStatus(undefined, {}, ctx);
+
+      expect(exitCode).toBe(2);
+      const output = logSpy.mock.calls.map((c) => String(c[0])).join("\n");
+      // ⚠️ または 🔄 などの更新シンボルが含まれること
+      expect(output).toMatch(/[⚠️🔄]/u);
+    } finally {
+      logSpy.mockRestore();
+    }
+  });
+
+  // ── V3-1: パッチ更新はデフォルトで無視される ─────────────────
+  it("V3-1: パッチ更新（1.0.0→1.0.1）はデフォルトで無視されて EXIT_CODE=0", async () => {
+    fixture = await createGitFixture({
+      "spectrack.yml": `frontMatterKeyPrefix: x-st-\n`,
+      "doc/prd.md": `---\nx-st-id: prd-001\nx-st-version-path: version\nversion: 1.0.1\n---\n# PRD\n`,
+      "doc/uc.md": `---\nx-st-id: uc-001\nx-st-version-path: version\nx-st-dependencies:\n  - id: prd-001\n    version: 1.0.0\nversion: 1.0.0\n---\n# UC\n`,
+    });
+
+    const ctx = await initCommandContext(fixture.dir, false);
+    const exitCode = await runStatus(undefined, {}, ctx);
+
+    expect(exitCode).toBe(0);
+  });
+
+  // ── V3-2: --strict 指定時はパッチ更新も検知される ────────────
+  it("V3-2: --strict 指定時はパッチ更新（1.0.0→1.0.1）も EXIT_CODE=2", async () => {
+    fixture = await createGitFixture({
+      "spectrack.yml": `frontMatterKeyPrefix: x-st-\n`,
+      "doc/prd.md": `---\nx-st-id: prd-001\nx-st-version-path: version\nversion: 1.0.1\n---\n# PRD\n`,
+      "doc/uc.md": `---\nx-st-id: uc-001\nx-st-version-path: version\nx-st-dependencies:\n  - id: prd-001\n    version: 1.0.0\nversion: 1.0.0\n---\n# UC\n`,
+    });
+
+    const ctx = await initCommandContext(fixture.dir, false);
+    const exitCode = await runStatus(undefined, { strict: true }, ctx);
+
+    expect(exitCode).toBe(2);
+  });
+
+  // ── E4-2: frontmatter 完全欠損のファイルを指定 ───────────────
+  it("E4-2: frontmatter がないファイルを指定すると EXIT_CODE=1", async () => {
+    fixture = await createGitFixture({
+      "spectrack.yml": `frontMatterKeyPrefix: x-st-\n`,
+      "doc/plain.md": `# Plain markdown\nNo frontmatter here.\n`,
+    });
+
+    const ctx = await initCommandContext(fixture.dir, false);
+    const filePath = join(fixture.dir, "doc/plain.md");
+    const exitCode = await runStatus(filePath, {}, ctx);
+
+    expect(exitCode).toBe(1);
+  });
+
+  // ── E4-3: 依存先が Working tree から削除（Git 履歴には存在） ──
+  it("E4-3: 依存先ファイルが削除されている場合は EXIT_CODE=1", async () => {
+    fixture = await createGitFixture({
+      "spectrack.yml": `frontMatterKeyPrefix: x-st-\n`,
+      "doc/prd.md": `---\nx-st-id: prd-001\nx-st-version-path: version\nversion: 1.0.0\n---\n# PRD\n`,
+      "doc/uc.md": `---\nx-st-id: uc-001\nx-st-version-path: version\nx-st-dependencies:\n  - id: prd-001\n    version: 1.0.0\nversion: 1.0.0\n---\n# UC\n`,
+    });
+
+    // prd.md を git rm で削除してコミット（Git 履歴には残る）
+    await fixture.git.rm("doc/prd.md");
+    await fixture.git.commit("remove prd.md");
 
     const ctx = await initCommandContext(fixture.dir, false);
     const exitCode = await runStatus(undefined, {}, ctx);
