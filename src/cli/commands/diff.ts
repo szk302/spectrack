@@ -111,12 +111,13 @@ export async function runDiff(
   const unifiedLines = options.full ? 99999 : (options.context ?? 3);
 
   try {
-    const diffOutput = await ctx.git.diff([
-      `-U${unifiedLines}`,
-      targetCommit.hash,
-      "--",
-      relPath,
-    ]);
+    // リネームされた場合は旧パスの blob と現在のファイルを比較する
+    const oldPath = targetCommit.filePath ?? relPath;
+    const diffArgs =
+      oldPath !== relPath
+        ? [`-U${unifiedLines}`, `${targetCommit.hash}:${oldPath}`, relPath]
+        : [`-U${unifiedLines}`, targetCommit.hash, "--", relPath];
+    const diffOutput = await ctx.git.diff(diffArgs);
     if (diffOutput) {
       console.log(diffOutput);
     } else {
