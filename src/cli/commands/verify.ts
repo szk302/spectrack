@@ -21,9 +21,9 @@ export async function runVerify(
 
   let exitCode: ExitCode = ExitCode.SUCCESS;
 
-  // フロントマター構造チェック
+  // フロントマター構造チェック（パースエラー含む）
   let frontMatterOk = 0;
-  const frontMatterErrors: string[] = [];
+  const frontMatterErrors: string[] = [...ctx.parseErrors];
   for (const doc of ctx.docs) {
     const relPath = relative(ctx.cwd, doc.filePath);
     if (!doc.frontMatter.id) {
@@ -79,6 +79,11 @@ export async function runVerify(
           versionWarnings.push(msg);
         }
       }
+    } else if (doc.frontMatter.id && doc.frontMatter.versionPath) {
+      // versionPath は設定されているがバージョン値が取得できない
+      versionErrors.push(
+        `  - [${relPath}] バージョン情報が取得できません (versionPath: ${doc.frontMatter.versionPath})`,
+      );
     }
   }
 

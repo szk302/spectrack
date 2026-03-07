@@ -1,3 +1,4 @@
+import { relative } from "node:path";
 import type { SimpleGit } from "simple-git";
 import type { Config } from "../types/config.js";
 import type { VersionedDocument } from "../types/document.js";
@@ -6,7 +7,7 @@ import { loadConfig } from "../config/loader.js";
 import { loadIgnore } from "../scanner/ignore-parser.js";
 import { scanFiles } from "../scanner/file-scanner.js";
 import { parseFile } from "../frontmatter/parser.js";
-import { buildIdRegistry } from "../scanner/id-registry.js";
+import { buildIdRegistry, buildIdRegistryPermissive } from "../scanner/id-registry.js";
 import { resolveVersion } from "../version/version-resolver.js";
 import { createGitClient, createGitClientOptional } from "../git/git-client.js";
 
@@ -17,6 +18,7 @@ export type CommandContext = {
   readonly idRegistry: IdRegistry;
   readonly git: SimpleGit;
   readonly cwd: string;
+  readonly parseErrors: readonly string[];
 };
 
 /** list コマンド専用コンテキスト（Git 未初期化環境でも動作する） */
@@ -54,19 +56,22 @@ export async function initCommandContext(
   const filePaths = scanFiles(cwd, ig, cwd);
 
   const docs: VersionedDocument[] = [];
+  const parseErrors: string[] = [];
   for (const filePath of filePaths) {
     try {
       const parsed = parseFile(filePath, cwd);
       const currentVersion = resolveVersion(parsed);
       docs.push({ ...parsed, currentVersion });
-    } catch {
-      // パースエラーは無視（verify コマンドで報告）
+    } catch (err) {
+      const relPath = relative(cwd, filePath);
+      const msg = err instanceof Error ? err.message : String(err);
+      parseErrors.push(`  - [${relPath}] フロントマター形式が不正です: ${msg}`);
     }
   }
 
-  const idRegistry = buildIdRegistry(docs, cwd);
+  const idRegistry = buildIdRegistryPermissive(docs, cwd);
 
-  return { config, docs, idRegistry, git, cwd };
+  return { config, docs, idRegistry, git, cwd, parseErrors };
 }
 
 /**
