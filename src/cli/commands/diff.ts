@@ -39,6 +39,14 @@ export async function runDiff(
   }
 
   const parsed = parseFile(filePath, ctx.cwd);
+
+  if (!parsed.frontMatter.versionPath && !parsed.frontMatter.id) {
+    printError(
+      `ERROR: [${relPath}] は初期化されていません。spectrack init を実行してください`,
+    );
+    return ExitCode.ERROR;
+  }
+
   const versionPath = parsed.frontMatter.versionPath ?? "version";
   const currentVersion = resolveVersion(parsed);
 
