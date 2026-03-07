@@ -95,6 +95,48 @@ export async function findHistoricalPath(
 }
 
 /**
+ * 指定IDを過去に含んでいたファイルパスとその最終コミットハッシュを返す
+ * `git log -S` を用いて全コミット履歴を検索する
+ */
+export async function findHistoricalDependentFiles(
+  git: SimpleGit,
+  targetId: string,
+): Promise<Array<{ filePath: string; commitHash: string }>> {
+  try {
+    const result = await git.raw([
+      "log",
+      "--all",
+      `-S${targetId}`,
+      "--name-only",
+      "--format=COMMIT:%H",
+    ]);
+
+    const lines = result.split("\n");
+    const fileMap = new Map<string, string>(); // filePath -> commitHash (最初に見つかったもの=最新)
+    let currentCommit = "";
+
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed) continue;
+      if (trimmed.startsWith("COMMIT:")) {
+        currentCommit = trimmed.slice(7, 14); // 7文字の短縮ハッシュ
+      } else if (currentCommit) {
+        if (!fileMap.has(trimmed)) {
+          fileMap.set(trimmed, currentCommit);
+        }
+      }
+    }
+
+    return Array.from(fileMap.entries()).map(([filePath, commitHash]) => ({
+      filePath,
+      commitHash,
+    }));
+  } catch {
+    return [];
+  }
+}
+
+/**
  * 指定ファイルがWorking treeで未コミットの変更を持つか確認する
  */
 export async function isFileModifiedInWorkingTree(

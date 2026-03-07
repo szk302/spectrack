@@ -180,10 +180,11 @@ export function createProgram(): Command {
   program
     .command("dependents <file>")
     .description("指定ドキュメントに依存しているドキュメントを検索する")
-    .action(async (file: string) => {
+    .option("--all", "全コミット履歴から過去の依存も含めて検索する")
+    .action(async (file: string, opts: { all?: boolean }) => {
       const filePath = resolve(process.cwd(), file);
       const code = await withContext(true, async (ctx) =>
-        runDependents(filePath, ctx),
+        runDependents(filePath, opts, ctx),
       );
       process.exit(code);
     });
