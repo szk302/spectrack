@@ -5,7 +5,7 @@ import { printError } from "../../output/formatter.js";
 import { parseFile } from "../../frontmatter/parser.js";
 import { resolveVersion } from "../../version/version-resolver.js";
 import { findHistoricalDependentFiles } from "../../git/git-client.js";
-import type { CommandContext } from "../runner.js";
+import type { DependentsCommandContext } from "../runner.js";
 
 /**
  * `spectrack dependents <file> [--all]`
@@ -16,7 +16,7 @@ import type { CommandContext } from "../runner.js";
 export async function runDependents(
   filePath: string,
   opts: { all?: boolean },
-  ctx: CommandContext,
+  ctx: DependentsCommandContext,
 ): Promise<ExitCode> {
   if (!existsSync(filePath)) {
     printError(`ERROR: ファイル [${filePath}] が見つかりません`);
@@ -70,6 +70,14 @@ export async function runDependents(
     }
 
     return ExitCode.SUCCESS;
+  }
+
+  // --all モード: Git が必要
+  if (ctx.git === null) {
+    printError(
+      "ERROR: --all オプションには Git リポジトリが必要です。Git リポジトリが初期化されていないか、コミットが存在しません",
+    );
+    return ExitCode.ERROR;
   }
 
   // --all モード: Git 全履歴から過去の依存も含めて検索

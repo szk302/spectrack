@@ -2,7 +2,7 @@ import { Command } from "commander";
 import { resolve } from "node:path";
 import { ExitCode } from "../output/exit-code.js";
 import { printError } from "../output/formatter.js";
-import { initCommandContext, initListContext } from "./runner.js";
+import { initCommandContext, initListContext, initDependentsContext } from "./runner.js";
 import { runInit } from "./commands/init.js";
 import { runVerify } from "./commands/verify.js";
 import { runGraph } from "./commands/graph.js";
@@ -182,11 +182,15 @@ export function createProgram(): Command {
     .description("指定ドキュメントに依存しているドキュメントを検索する")
     .option("--all", "全コミット履歴から過去の依存も含めて検索する")
     .action(async (file: string, opts: { all?: boolean }) => {
-      const filePath = resolve(process.cwd(), file);
-      const code = await withContext(true, async (ctx) =>
-        runDependents(filePath, opts, ctx),
-      );
-      process.exit(code);
+      try {
+        const filePath = resolve(process.cwd(), file);
+        const ctx = await initDependentsContext(process.cwd());
+        const code = await runDependents(filePath, opts, ctx);
+        process.exit(code);
+      } catch (err) {
+        printError(err instanceof Error ? err.message : String(err));
+        process.exit(1);
+      }
     });
 
   // spectrack diff

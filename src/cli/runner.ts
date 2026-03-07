@@ -28,6 +28,15 @@ export type ListCommandContext = {
   readonly cwd: string;
 };
 
+/** dependents コマンド専用コンテキスト（通常モードは Git 不要） */
+export type DependentsCommandContext = {
+  readonly config: Config;
+  readonly docs: readonly VersionedDocument[];
+  readonly idRegistry: IdRegistry;
+  readonly git: SimpleGit | null;
+  readonly cwd: string;
+};
+
 /**
  * コマンド実行前の共通初期化処理
  * 1. Git リポジトリ確認
@@ -89,3 +98,31 @@ export async function initListContext(
   return { config, docs, idRegistry, git, cwd };
 }
 
+/**
+ * dependents コマンド専用の初期化処理
+ * 通常モードは Git が未初期化の場合でも動作する（git = null）
+ */
+export async function initDependentsContext(
+  cwd: string = process.cwd(),
+): Promise<DependentsCommandContext> {
+  const git = await createGitClientOptional(cwd);
+  const config = loadConfig(cwd, true);
+
+  const ig = loadIgnore(cwd);
+  const filePaths = scanFiles(cwd, ig, cwd);
+
+  const docs: VersionedDocument[] = [];
+  for (const filePath of filePaths) {
+    try {
+      const parsed = parseFile(filePath, cwd);
+      const currentVersion = resolveVersion(parsed);
+      docs.push({ ...parsed, currentVersion });
+    } catch {
+      // パースエラーは無視
+    }
+  }
+
+  const idRegistry = buildIdRegistry(docs, cwd);
+
+  return { config, docs, idRegistry, git, cwd };
+}
