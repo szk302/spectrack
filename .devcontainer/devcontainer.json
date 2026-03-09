@@ -1,0 +1,74 @@
+{
+  "name": "spectrack",
+  "dockerComposeFile": "./docker-compose.yml",
+  "service": "spectrack",
+  "workspaceFolder": "/home/dev/work",
+  "remoteUser": "dev",
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "editor.tabSize": 2,
+        "editor.guides.bracketPairs": "active",
+        "editor.guides.highlightActiveIndentation": true,
+        "editor.inlayHints.enabled": "offUnlessPressed",
+        "typescript.inlayHints.variableTypes.enabled": true,
+        "typescript.inlayHints.parameterNames.enabled": "all",
+        "typescript.inlayHints.propertyDeclarationTypes.enabled": true,
+        "typescript.inlayHints.parameterTypes.enabled": true,
+        "typescript.inlayHints.functionLikeReturnTypes.enabled": true,
+        "javascript.inlayHints.variableTypes.enabled": true,
+        "javascript.inlayHints.parameterNames.enabled": "all",
+        "javascript.inlayHints.propertyDeclarationTypes.enabled": true,
+        "javascript.inlayHints.parameterTypes.enabled": true,
+        "javascript.inlayHints.functionLikeReturnTypes.enabled": true,
+        "editor.linkedEditing": true,
+        "extensions.experimental.affinity": {
+          "vscodevim.vim": 1
+        },
+        "source.organizeImports": true,
+        "editor.defaultFormatter": "esbenp.prettier-vscode",
+        "[jsonc]": {
+          "editor.defaultFormatter": "vscode.json-language-features"
+        },
+        "files.trimTrailingWhitespace": true,
+        "editor.detectIndentation": false,
+        "markdown.extension.math.enabled": false,
+        "markdown.extension.list.indentationSize": "inherit",
+        "markdown.extension.print.absoluteImgPath": false,
+        "markdown.extension.tableFormatter.enabled": false,
+        "search.useIgnoreFiles": false
+      },
+      "extensions": [
+        "MS-CEINTL.vscode-language-pack-ja",
+        "vscode-icons-team.vscode-icons",
+        "esbenp.prettier-vscode",
+        "ritwickdey.LiveServer",
+        "humao.rest-client",
+        "alefragnani.Bookmarks",
+        "streetsidesoftware.code-spell-checker",
+        "Gruntfuggly.todo-tree",
+        "zhengxiaoyao0716.intelligence-change-case",
+        "ms-azuretools.vscode-docker",
+        "shd101wyy.markdown-preview-enhanced",
+        "DavidAnson.vscode-markdownlint",
+        "csholmq.excel-to-markdown-table",
+        "mechatroner.rainbow-csv",
+        "janisdd.vscode-edit-csv",
+        "dbaeumer.vscode-eslint",
+        "Arjun.swagger-viewer",
+        "42Crunch.vscode-openapi",
+        "mermade.openapi-lint",
+        "hediet.vscode-drawio",
+        "exiasr.hadolint",
+        "IBM.output-colorizer",
+        "foxundermoon.shell-format",
+        "mikestead.dotenv",
+        "donjayamanne.git-extension-pack",
+        "mhutchie.git-graph",
+        "github.copilot",
+        "github.copilot-chat"
+      ]
+    }
+  },
+  "shutdownAction": "stopCompose"
+}
