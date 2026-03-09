@@ -18,7 +18,7 @@
 
 ```bash
 # npm を使用する場合
-npm install -g spectrack
+npm install -g @szk302/spectrack
 
 ```
 
