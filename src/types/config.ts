@@ -29,17 +29,17 @@ export const DEFAULT_CONFIG: Config = {
     md: {
       version: "0.0.0",
       "x-st-version-path": "version",
-      "x-st-id": "{{context.file.dir}}-{{nanoid}}",
+      "x-st-id": "{{context.file.dir}}-{{context.utils.nanoid}}",
       "x-st-dependencies": [],
     },
     yml: {
       "x-st-version-path": "info.version",
-      "x-st-id": "{{context.file.dir}}-{{nanoid}}",
+      "x-st-id": "{{context.file.dir}}-{{context.utils.nanoid}}",
       "x-st-dependencies": [],
     },
     yaml: {
       "x-st-version-path": "info.version",
-      "x-st-id": "{{context.file.dir}}-{{nanoid}}",
+      "x-st-id": "{{context.file.dir}}-{{context.utils.nanoid}}",
       "x-st-dependencies": [],
     },
   },
