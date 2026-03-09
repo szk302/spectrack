@@ -1,9 +1,10 @@
 {
   "name": "@szk302/spectrack",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "description": "仕様書依存関係追跡ツール",
   "license": "MIT",
-  "author": "",
+  "author": "szk302",
+  "repository": "szk302/spectrack",
   "type": "module",
   "engines": {
     "node": ">=24.0.0"
